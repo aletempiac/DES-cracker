@@ -21,9 +21,15 @@ end entity des;
 
 architecture rtl of des is
 
+    signal lr_0 : w64;
+
+    type lr_type is array(1 to 16) of w32;
+    signal l_local, r_local : lr_type;
+
 begin
 
-	
+    --initial permutation of  p_in
+	lr_0 <= ip(p_in);
 
 end architecture rtl;
 
