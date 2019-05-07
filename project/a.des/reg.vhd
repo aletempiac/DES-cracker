@@ -1,5 +1,12 @@
-library ieee;
-use ieee.std_logic_1164.all;
+------------------------------------------------------------
+-- Author       :   Pietro Mambelli
+-- File         :   dht11_ctrl_axi_wrapper.vhd
+------------------------------------------------------------
+library IEEE;
+library WORK;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.NUMERIC_STD.all;
+use WORK.des_pkg.all;
 
 entity reg is
 	generic (
