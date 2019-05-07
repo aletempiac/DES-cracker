@@ -12,7 +12,7 @@ use WORK.des_pkg.all;
 entity s_box is
     port(   s_in    : in std_ulogic_vector(0 to 5);
             s_table : in s_matrix;
-            s_out   : out std_ulogic_vector(0 to 3);
+            s_out   : out std_ulogic_vector(0 to 3)
     );
 end entity s_box;
 
@@ -28,4 +28,3 @@ begin
     s_out <= s_table(row_index, col_index);
 
 end architecture rtl;
-

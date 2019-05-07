@@ -11,7 +11,7 @@ use WORK.des_pkg.all;
 entity cipher_f is
     port(   r   : in w32;
             k   : in w48;
-            f_out : out w32;
+            f_out : out w32
     );
 end entity cipher_f;
 
@@ -21,7 +21,7 @@ architecture rtl of cipher_f is
     component s_box
         port(   s_in    : in std_ulogic_vector(0 to 5);
                 s_table : in s_matrix;
-                s_out   : out std_ulogic_vector(0 to 3);
+                s_out   : out std_ulogic_vector(0 to 3)
         );
     end component s_box;
 
@@ -42,4 +42,3 @@ begin
     f_out <= p(s_local);    --p permutation
 
 end architecture rtl;
-
