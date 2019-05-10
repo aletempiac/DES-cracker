@@ -16,13 +16,13 @@ package des_pkg is
 
     type table is array (natural range <>) of natural;
     type s_matrix is array (natural range <>, natural range <>) of std_ulogic_vector(1 to 4);
-    type s_array is array (1 to 8) of s_matrix;
+    type s_array is array (0 to 7) of s_matrix(0 to 3, 0 to 15);
     type key_array is array (1 to 16) of w48;
-    type cd_array is array (0 to 16) of w48;
+    type cd_array is array (0 to 16) of w28;
 
     constant IP_TABLE : table (1 to 64) := (58, 50, 42, 34, 26, 18 , 10, 2,
                                             60, 52, 44, 36, 28, 20, 12, 4,
-                                            62, 54, 46, 28, 30, 22, 14, 6,
+                                            62, 54, 46, 38, 30, 22, 14, 6,
                                             64, 56, 48, 40, 32, 24, 16, 8,
                                             57, 49, 41, 33, 25, 17, 9, 1,
                                             59, 51, 43, 35, 27, 19, 11, 3,
@@ -77,8 +77,6 @@ package des_pkg is
 
     constant SHIFT_TABLE : table(1 to 16) := (1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1);
 
-    constant S_BOXES : s_array := (S0, S1, S2, S3, S4, S5, S6, S7);
-
 
     constant S0 : s_matrix(0 to 3, 0 to 15) := (("1110", "0100", "1101", "0001", "0010", "1111", "1011", "1000", "0011", "1010", "0110", "1100", "0101", "1001", "0000", "0111"),
                 ("0000", "1111", "0111", "0100", "1110", "0010", "1101", "0001", "1010", "0110", "1100", "1011", "1001", "0101", "0011", "1000"),
@@ -128,8 +126,12 @@ package des_pkg is
                 ( "0111", "1011", "0100", "0001", "1001", "1100", "1110", "0010", "0000", "0110", "1010", "1101", "1111", "0011", "0101", "1000"),
                 ( "0010", "0001", "1110", "0111", "0100", "1010", "1000", "1101", "1111", "1100", "1001", "0000", "0011", "0101", "0110", "1011"));
 
+
+
+    constant S_BOXES : s_array := (S0, S1, S2, S3, S4, S5, S6, S7);
+
     -- FUNCTIONS DECLARATION
-    function left_shift(w: w28, amount: natural) return w28;
+    function left_shift(w: w28; amount: natural) return w28;
     --function right_shift(w: w28, amount: natural) return w28;
     function ip(w: w64) return w64;
     function fp(w: w64) return w64;
@@ -142,7 +144,7 @@ end package;
 
 package body des_pkg is
 
-  function left_shift(w: w28, amount: natural) return w28 is
+  function left_shift(w: w28; amount: natural) return w28 is
     begin
       if amount = 2 then
         return w(3 to 28) & w(1 to 2);
@@ -157,7 +159,7 @@ package body des_pkg is
     variable result: w64;
     begin
       for i in 1 to 64 loop
-        result(i) := w(IP_TABLE(i))
+        result(i) := w(IP_TABLE(i));
       end loop;
       return result;
   end function ip;
@@ -166,7 +168,7 @@ package body des_pkg is
     variable result: w64;
     begin
       for i in 1 to 64 loop
-        result(i) := w(FP_TABLE(i))
+        result(i) := w(FP_TABLE(i));
       end loop;
       return result;
   end function fp;
@@ -175,7 +177,7 @@ package body des_pkg is
     variable result: w48;
     begin
       for i in 1 to 48 loop
-        result(i) := w(E_TABLE(i))
+        result(i) := w(E_TABLE(i));
       end loop;
       return result;
   end function e;
@@ -184,7 +186,7 @@ package body des_pkg is
     variable result: w32;
     begin
       for i in 1 to 32 loop
-        result(i) := w(P_TABLE(i))
+        result(i) := w(P_TABLE(i));
       end loop;
       return result;
   end function p;
@@ -193,7 +195,7 @@ package body des_pkg is
     variable result: w56;
     begin
       for i in 1 to 56 loop
-        result(i) := w(PC1_TABLE(i))
+        result(i) := w(PC1_TABLE(i));
       end loop;
       return result;
   end function pc1;
@@ -202,7 +204,7 @@ package body des_pkg is
     variable result: w48;
     begin
       for i in 1 to 48 loop
-        result(i) := w(PC2_TABLE(i))
+        result(i) := w(PC2_TABLE(i));
       end loop;
       return result;
   end function pc2;

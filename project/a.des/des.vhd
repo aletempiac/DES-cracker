@@ -9,12 +9,11 @@ use IEEE.NUMERIC_STD.all;
 use WORK.des_pkg.all;
 
 entity des is
-    generic();
-    port(   clk     : in std_ulogic;
-            sresetn : in std_ulogic;
+    port(   --clk     : in std_ulogic;
+            --sresetn : in std_ulogic;
             p_in    : in w64;       --input plaintext
-            k       : in w64;       --key
-            p_out   : out w64;      --output cyphered plaintext
+            key     : in w64;       --key
+            p_out   : out w64       --output cyphered plaintext
     );
 end entity des;
 
@@ -22,12 +21,20 @@ end entity des;
 architecture rtl of des is
 
     --component instantiation
-    entity f_wrapper is
+    component f_wrapper
         port(   l       : in w32;
                 r       : in w32;
                 k       : in w48;
                 newr    : out w32
             );
+    end component;
+
+
+    component key_gen
+        port(   key   : in w64;
+                key_out : out key_array
+            );
+    end component;
 
 
     --signals declarations
@@ -35,13 +42,17 @@ architecture rtl of des is
 
     type lr_type is array(0 to 16) of w32;
     signal l_local, r_local : lr_type;
+    signal k : key_array;
 
 begin
 
     --initial permutation of  p_in
 	lr_0 <= ip(p_in);
-    l_local(0) <= lr0(1 to 32);
-    r_local(0) <= lr0(33 to 64);
+    l_local(0) <= lr_0(1 to 32);
+    r_local(0) <= lr_0(33 to 64);
+
+
+    key_gen_0: key_gen port map (key, k);
 
     --start of the enciphering process
     enc_gen: for i in 1 to 16 generate

@@ -23,7 +23,7 @@ architecture rtl of f_wrapper is
     component cipher_f
         port(   r   : in w32;
                 k   : in w48;
-                f_out : out w32;
+                f_out : out w32
         );
     end component cipher_f;
 

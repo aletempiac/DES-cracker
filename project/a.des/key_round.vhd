@@ -30,7 +30,7 @@ begin
   d_local <= left_shift(d_in, shift_amount);
   pc2_local <= c_local & d_local;
 
-  k_out <= pc2(pc2pc2_local);
+  k_out <= pc2(pc2_local);
   c_out <= c_local;
   d_out <= d_local;
 
