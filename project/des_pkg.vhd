@@ -17,6 +17,8 @@ package des_pkg is
     type table is array (natural range <>) of natural;
     type s_matrix is array (natural range <>, natural range <>) of std_ulogic_vector(1 to 4);
     type s_array is array (1 to 8) of s_matrix;
+    type key_array is array (1 to 16) of w48;
+    type cd_array is array (0 to 16) of w48;
 
     constant IP_TABLE : table (1 to 64) := (58, 50, 42, 34, 26, 18 , 10, 2,
                                             60, 52, 44, 36, 28, 20, 12, 4,
