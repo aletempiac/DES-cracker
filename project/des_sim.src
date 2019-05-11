@@ -1,4 +1,5 @@
 vcom -2008 -work myLib $src/des_pkg.vhd
+vcom -2008 -work myLib $src/a.des/reg.vhd
 vcom -2008 -work myLib $src/a.des/s_box.vhd
 vcom -2008 -work myLib $src/a.des/cipher_f.vhd
 vcom -2008 -work myLib $src/a.des/f_wrapper.vhd
