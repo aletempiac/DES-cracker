@@ -3,15 +3,18 @@
 -- File         :   des_wrap.vhd
 ------------------------------------------------------------
 library IEEE;
+library WORK;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.all;
+use IEEE.STD_LOGIC_UNSIGNED.all;
+use WORK.des_pkg.all;
 
 entity des_wrap is
     port(   clk     : in std_ulogic;
             sresetn : in std_ulogic;
             p_in    : in w64;       --input plaintext
             key     : in w64;       --key
-            index   : in natural range (0 to DES_NUMBER);
+            index   : in natural range 0 to DES_NUMBER-1;
             p_out   : out w64       --output cyphered plaintext
     );
 end entity des_wrap;
