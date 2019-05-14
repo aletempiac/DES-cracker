@@ -61,7 +61,6 @@ architecture rtl of des_ctrl is
     signal found_local      : std_ulogic;
     signal overflow         : std_ulogic;
     signal key_inc          : std_ulogic;
-    --signal en_comp          : std_ulogic;
     signal mux_sel          : std_ulogic;
     signal p_out_array      : des_out_array;
 
@@ -100,7 +99,7 @@ begin
         end if;
     end process;
 
-    p_comb: process(c_state, start, overflow, end_count, found_local)
+    p_comb: process(c_state, start, end_count, found_local)
     begin
         n_state <= c_state;
         en_count    <= '0';
@@ -118,7 +117,7 @@ begin
             when LOAD_KEY =>
 
                 n_state <= WAIT_PIPE;
-                
+
                 mux_sel <= '0';
                 key_inc <= '1';
                 en_count <= '1';
@@ -134,15 +133,12 @@ begin
                 en_count <= '1';
 
             when COMPARE =>
-                if (overflow = '1') then
-                    n_state <= NOT_FOUND;
-                elsif (found_local = '1') then
+                if (found_local = '1') then
                     n_state <= FOUND;
                 end if;
 
                 key_inc <= '1';
                 en_comp <= '1';
-
 
             when FOUND =>
                 n_state <= IDLE;
