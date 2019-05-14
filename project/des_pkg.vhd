@@ -19,6 +19,9 @@ package des_pkg is
     type s_array is array (0 to 7) of s_matrix(0 to 3, 0 to 15);
     type key_array is array (1 to 16) of w48;
     type cd_array is array (0 to 16) of w28;
+    type des_out_array is array (0 to DES_NUMBER-1) of w64;
+
+    constant DES_NUMBER     : integer := 1;
 
     constant IP_TABLE : table (1 to 64) := (58, 50, 42, 34, 26, 18 , 10, 2,
                                             60, 52, 44, 36, 28, 20, 12, 4,
