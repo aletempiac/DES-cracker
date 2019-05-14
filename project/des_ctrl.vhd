@@ -15,8 +15,7 @@ entity des_ctrl is
             k0          : in std_ulogic_vector(55 downto 0); -- starting key
             k           : out std_ulogic_vector(55 downto 0); -- last tried key
             k1          : out std_ulogic_vector(55 downto 0); --found key
-            found       : out std_ulogic;
-            finished    : out std_ulogic
+            found       : out std_ulogic
     );
 end entity des_ctrl;
 
@@ -56,9 +55,10 @@ architecture rtl of des_ctrl is
     signal c_state, n_state     : state;
 
     signal key              : w64;
-    signal en_count         : std_ulogic;
+    signal inc_count         : std_ulogic;
     signal end_count        : std_ulogic;
     signal found_local      : std_ulogic;
+    signal found_array      : std_ulogic_vector(0 to DES_NUMBER-1);
     signal overflow         : std_ulogic;
     signal key_inc          : std_ulogic;
     signal mux_sel          : std_ulogic;
@@ -69,20 +69,28 @@ begin
 
     des_wrap_gen: for i in 0 to DES_NUMBER-1 generate
         des_wrap_i:     des_wrap    port map(clk, sresetn, p, key, i, p_out_array(i));
-        comparator_i:   comparator  port map(c, p_out_array(i), found_local);
+        comparator_i:   comparator  port map(c, p_out_array(i), found_array(i));
     end generate;
 
-    counter_0: counter port map(clk, sresetn, start, en_count, end_count);
+    p_found: process(found_local)
+        variable tmp : std_ulogic;
+    begin
+        tmp := '0';
+        for i in 0 to DES_NUMBER-1 loop
+            tmp := tmp or found_array(i);
+        end loop;
+        found_local <= tmp;
+    end process;
+
+    counter_0: counter port map(clk, sresetn, start, inc_count, end_count);
 
     p_key_inc: process(clk)
     begin
         if (clk='1' and clk'event) then
-            if (key_inc='1') then
-                if (mux_sel ='0') then
-                    key <= k0;
-                elsif (mux_sel = '1') then
-                    key <= key + DES_NUMBER;
-                end if;
+            if (key_inc='0') then
+                key <= k0;
+            else
+                key <= key + DES_NUMBER;
             end if;
         end if;
     end process;
@@ -101,26 +109,24 @@ begin
 
     p_comb: process(c_state, start, end_count, found_local)
     begin
-        n_state <= c_state;
-        en_count    <= '0';
+        n_state     <= c_state;
+        inc_count   <= '0';
         key_inc     <= '0';
         found       <= '0';
-        finished    <= '0';
-        mux_sel     <= '0';
 
         case c_state is
             when IDLE =>
                 if (start = '1') then
-                    n_state <= LOAD_KEY;
+                    --n_state <= LOAD_KEY;
+                    n_state <= WAIT_PIPE;
                 end if;
 
-            when LOAD_KEY =>
+            --when LOAD_KEY =>
 
-                n_state <= WAIT_PIPE;
+               -- n_state <= WAIT_PIPE;
 
-                mux_sel <= '0';
-                key_inc <= '1';
-                en_count <= '1';
+                --key_inc <= '0';
+                --inc_count <= '1';
 
 
             when WAIT_PIPE =>
@@ -128,9 +134,8 @@ begin
                     n_state <= COMPARE;
                 end if;
 
-                mux_sel <= '1';
                 key_inc <= '1';
-                en_count <= '1';
+                inc_count <= '1';
 
             when COMPARE =>
                 if (found_local = '1') then
@@ -138,11 +143,9 @@ begin
                 end if;
 
                 key_inc <= '1';
-                en_comp <= '1';
 
             when FOUND =>
                 n_state <= IDLE;
-                finished <= '1';
                 found <= '1';
 
             when others =>
