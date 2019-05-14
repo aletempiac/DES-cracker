@@ -112,14 +112,13 @@ begin
         case c_state is
             when IDLE =>
                 if (start = '1') then
-                    n_state <= WAIT_PIPE;
+                    n_state <= LOAD_KEY;
                 end if;
 
             when LOAD_KEY =>
-                if (end_count = '1') then
-                    n_state <= COMPARE;
-                end if;
 
+                n_state <= WAIT_PIPE;
+                
                 mux_sel <= '0';
                 key_inc <= '1';
                 en_count <= '1';
@@ -144,9 +143,6 @@ begin
                 key_inc <= '1';
                 en_comp <= '1';
 
-            when NOT_FOUND =>
-                n_state <= IDLE;
-                finished_local <= '1';
 
             when FOUND =>
                 n_state <= IDLE;
