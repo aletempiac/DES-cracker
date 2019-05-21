@@ -141,6 +141,7 @@ package des_pkg is
     function e(w: w32) return w48;
     function p(w: w32) return w32;
     function pc1(w: w64) return w56;
+    function pc1_inv(w: w56) return w64;
     function pc2(w: w56) return w48;
 
 end package;
@@ -202,6 +203,15 @@ package body des_pkg is
       end loop;
       return result;
   end function pc1;
+
+  function pc1_inv(w: w56) return w64 is
+    variable result: w64 := (others => '0');
+    begin
+      for i in 1 to 56 loop
+        result(PC1_TABLE(i)) := w(i);
+      end loop;
+      return result;
+  end function pc1_inv;
 
   function pc2(w: w56) return w48 is
     variable result: w48;

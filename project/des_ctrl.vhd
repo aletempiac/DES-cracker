@@ -52,13 +52,23 @@ architecture rtl of des_ctrl is
         );
     end component;
 
+    component reg
+	    generic(n : positive);
+	    port(   clk     : in std_ulogic;
+                sresetn : in std_ulogic;
+		        d       : in std_ulogic_vector(n-1 downto 0);
+		        q       : out std_ulogic_vector(n-1 downto 0)
+	        );
+    end component;
+
     -- signals
 
     type state is (IDLE, LOAD_KEY, WAIT_PIPE, COMPARE, FOUND, NOT_FOUND);
     signal c_state, n_state     : state;
 
+    type cd16_array is array (0 to DES_NUMBER-1) of w56;
     signal key              : w64;
-    signal inc_count         : std_ulogic;
+    signal inc_count        : std_ulogic;
     signal end_count        : std_ulogic;
     signal found_local      : std_ulogic;
     signal found_array      : std_ulogic_vector(0 to DES_NUMBER-1);
@@ -66,14 +76,30 @@ architecture rtl of des_ctrl is
     signal key_inc          : std_ulogic;
     signal mux_sel          : std_ulogic;
     signal p_out_array      : des_out_array;
-
+    signal p_out_array_s    : des_out_array;
+    signal cd16             : cd16_array;
+    signal cd16_s           : cd16_array;
+    signal cd16_mux         : w56;
 
 begin
 
     des_wrap_gen: for i in 0 to DES_NUMBER-1 generate
-        des_wrap_i:     des_wrap    port map(clk, sresetn, p, key, i, p_out_array(i));
-        comparator_i:   comparator  port map(c, p_out_array(i), found_array(i));
+        des_wrap_i:     des_wrap    port map(clk, sresetn, p, key, i, p_out_array(i), cd16(i));
+        reg_des_ciph_i: reg         port map(clk, sresetn, p_out_array(i), p_out_array_s(i));
+        reg_des_cd16_i: reg         port map(clk, sresetn, cd16(i), cd16_s(i));
+        comparator_i:   comparator  port map(c, p_out_array_s(i), found_array(i));
     end generate;
+
+    p_mux: process(cd16_s, found_array)
+    begin
+        for i in 0 to DES_NUMBER-1 loop
+            if (found_array(i)='1') then
+                cd16_mux <= cd16_s(i);
+            end if;
+        end loop;
+    end process;
+
+    k1 <= pc1_inv(cd16_mux);
 
     p_found: process(found_local)
         variable tmp : std_ulogic;
@@ -84,6 +110,8 @@ begin
         end loop;
         found_local <= tmp;
     end process;
+
+    found <= found_local;
 
     counter_0: counter port map(clk, sresetn, start, inc_count, end_count);
 
@@ -97,6 +125,8 @@ begin
             end if;
         end if;
     end process;
+
+    k <= key;
 
 
     p_states: process(clk)
