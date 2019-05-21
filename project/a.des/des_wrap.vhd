@@ -12,10 +12,11 @@ use WORK.des_pkg.all;
 entity des_wrap is
     port(   clk     : in std_ulogic;
             sresetn : in std_ulogic;
-            p_in    : in w64;       --input plaintext
-            key     : in w64;       --key
+            p_in    : in w64;                               --input plaintext
+            key     : in w64;                               --key
             index   : in natural range 0 to DES_NUMBER-1;
-            p_out   : out w64       --output cyphered plaintext
+            p_out   : out w64;                              --output cyphered plaintext
+            cd16    : out w56                               --cd16 represents the permutated key
     );
 end entity des_wrap;
 
@@ -27,7 +28,8 @@ architecture rtl of des_wrap is
                 sresetn : in std_ulogic;
                 p_in    : in w64;       --input plaintext
                 key     : in w64;       --key
-                p_out   : out w64       --output cyphered plaintext
+                p_out   : out w64;      --output cyphered plaintext
+                cd16    : out w56       --cd16 represents the permutated key
         );
     end component;
 
@@ -55,7 +57,9 @@ begin
                         sresetn => sresetn,
                         p_in    => p_in,
                         key     => key_local_s,
-                        p_out   => p_out);
+                        p_out   => p_out,
+                        cd16    => cd16
+                    );
 
 end architecture rtl;
 

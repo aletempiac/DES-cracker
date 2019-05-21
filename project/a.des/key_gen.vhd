@@ -12,7 +12,8 @@ entity key_gen is
     port(   clk     : std_ulogic;
             sresetn : std_ulogic;
             key     : in w64;
-            key_out : out key_array
+            key_out : out key_array;
+            cd16    : out w56
         );
 end entity key_gen;
 
@@ -57,5 +58,6 @@ begin
         end generate;
     end generate;
 
+    cd16 <= c_local_s(15) & d_local_s(15);
 
 end rtl;

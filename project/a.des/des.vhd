@@ -13,7 +13,8 @@ entity des is
             sresetn : in std_ulogic;
             p_in    : in w64;       --input plaintext
             key     : in w64;       --key
-            p_out   : out w64       --output cyphered plaintext
+            p_out   : out w64;      --output cyphered plaintext
+            cd16     : out w56      --cd16 represents the permutated key
     );
 end entity des;
 
@@ -34,7 +35,8 @@ architecture rtl of des is
         port(   clk     : std_ulogic;
                 sresetn : std_ulogic;
                 key     : in w64;
-                key_out : out key_array
+                key_out : out key_array;
+                cd16    : out w56
             );
     end component;
 
@@ -64,7 +66,7 @@ begin
     r_local_s(0) <= lr_0(33 to 64);
 
 
-    key_gen_0: key_gen port map (clk, sresetn, key, k);
+    key_gen_0: key_gen port map (clk, sresetn, key, k, cd16);
 
     --start of the enciphering process
     enc_gen: for i in 1 to 16 generate

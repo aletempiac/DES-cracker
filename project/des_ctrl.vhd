@@ -3,8 +3,10 @@
 -- File         :   des_ctrl.vhd
 ------------------------------------------------------------
 library IEEE;
+library WORK;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.all;
+use WORK.des_pkg.all;
 
 entity des_ctrl is
     port(   clk         : in std_ulogic;
@@ -12,9 +14,9 @@ entity des_ctrl is
             start       : in std_ulogic;
             p           : in std_ulogic_vector(63 downto 0);
             c           : in std_ulogic_vector(63 downto 0);
-            k0          : in std_ulogic_vector(55 downto 0); -- starting key
-            k           : out std_ulogic_vector(55 downto 0); -- last tried key
-            k1          : out std_ulogic_vector(55 downto 0); --found key
+            k0          : in std_ulogic_vector(55 downto 0);    -- starting key
+            k           : out std_ulogic_vector(55 downto 0);   -- last tried key
+            k1          : out std_ulogic_vector(55 downto 0);   --found key
             found       : out std_ulogic
     );
 end entity des_ctrl;
@@ -27,7 +29,8 @@ architecture rtl of des_ctrl is
                 p_in    : in w64;       --input plaintext
                 key     : in w64;       --key
                 index   : natural range(0 to DES_NUMBER-1);
-                p_out   : out w64       --output cyphered plaintext
+                p_out   : out w64;      --output cyphered plaintext
+                cd16    : out w56       --cd16 represents the permutated key
         );
     end component;
 
