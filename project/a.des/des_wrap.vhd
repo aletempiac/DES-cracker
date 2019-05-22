@@ -13,7 +13,7 @@ entity des_wrap is
     port(   clk     : in std_ulogic;
             sresetn : in std_ulogic;
             p_in    : in w64;                               --input plaintext
-            key     : in w64;                               --key
+            key     : in w56;                               --key
             index   : in natural range 0 to DES_NUMBER-1;
             p_out   : out w64;                              --output cyphered plaintext
             cd16    : out w56                               --cd16 represents the permutated key
@@ -43,15 +43,17 @@ architecture rtl of des_wrap is
     end component;
 
 
-    signal key_local    : w64;
+    signal key_local    : w56;
+    signal key_64       : w64;
     signal key_local_s  : w64;
 
 
 begin
 
 	key_local   <= key + index;
+    key_64 <= key_local(1 to 7) & '0' & key_local(8 to 14) & '0' & key(15 to 21) & '0' & key(22 to 28) & '0' & key(29 to 35) & '0' & key(36 to 42) & '0' & key(43 to 49) & '0' & key(50 to 56) & '0';
 
-    reg_add: reg generic map (64) port map (clk, sresetn, key_local, key_local_s);
+    reg_add: reg generic map (64) port map (clk, sresetn, key_64, key_local_s);
 
     des_0: des port map(clk     => clk,
                         sresetn => sresetn,
