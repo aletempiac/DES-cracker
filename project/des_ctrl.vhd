@@ -27,7 +27,7 @@ architecture rtl of des_ctrl is
         port(   clk     : in std_ulogic;
                 sresetn : in std_ulogic;
                 p_in    : in w64;       --input plaintext
-                key     : in w64;       --key
+                key     : in w56;       --key
                 index   : natural range(0 to DES_NUMBER-1);
                 p_out   : out w64;      --output cyphered plaintext
                 cd16    : out w56       --cd16 represents the permutated key
@@ -67,7 +67,7 @@ architecture rtl of des_ctrl is
     signal c_state, n_state     : state;
 
     type cd16_array is array (0 to DES_NUMBER-1) of w56;
-    signal key              : w64;
+    signal key              : w56;
     signal inc_count        : std_ulogic;
     signal end_count        : std_ulogic;
     signal found_local      : std_ulogic;
@@ -127,7 +127,6 @@ begin
     end process;
 
     k <= key;
-
 
     p_states: process(clk)
     begin
