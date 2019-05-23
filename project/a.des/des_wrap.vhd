@@ -51,7 +51,7 @@ architecture rtl of des_wrap is
 begin
 
 	key_local   <= key + index;
-    key_64 <= key_local(1 to 7) & '0' & key_local(8 to 14) & '0' & key(15 to 21) & '0' & key(22 to 28) & '0' & key(29 to 35) & '0' & key(36 to 42) & '0' & key(43 to 49) & '0' & key(50 to 56) & '0';
+    key_64 <= key_local(1 to 7) & '0' & key_local(8 to 14) & '0' & key_local(15 to 21) & '0' & key_local(22 to 28) & '0' & key_local(29 to 35) & '0' & key_local(36 to 42) & '0' & key_local(43 to 49) & '0' & key_local(50 to 56) & '0';
 
     reg_add: reg generic map (64) port map (clk, sresetn, key_64, key_local_s);
 

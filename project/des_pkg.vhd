@@ -7,6 +7,9 @@ use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.all;
 
 package des_pkg is
+
+    constant DES_NUMBER     : integer := 3;
+
     --subtypes for redefinition of vectors
     subtype w28 is std_ulogic_vector(1 to 28);
     subtype w32 is std_ulogic_vector(1 to 32);
@@ -21,7 +24,6 @@ package des_pkg is
     type cd_array is array (0 to 16) of w28;
     type des_out_array is array (0 to DES_NUMBER-1) of w64;
 
-    constant DES_NUMBER     : integer := 1;
 
     constant IP_TABLE : table (1 to 64) := (58, 50, 42, 34, 26, 18 , 10, 2,
                                             60, 52, 44, 36, 28, 20, 12, 4,
@@ -141,7 +143,7 @@ package des_pkg is
     function e(w: w32) return w48;
     function p(w: w32) return w32;
     function pc1(w: w64) return w56;
-    function pc1_inv(w: w56) return w64;
+    function pc1_inv(w: w56) return w56;
     function pc2(w: w56) return w48;
 
 end package;
@@ -204,12 +206,14 @@ package body des_pkg is
       return result;
   end function pc1;
 
-  function pc1_inv(w: w56) return w64 is
-    variable result: w64 := (others => '0');
+  function pc1_inv(w: w56) return w56 is
+    variable result : w56;
+    variable tmp    : w64 := (others => '0');
     begin
       for i in 1 to 56 loop
-        result(PC1_TABLE(i)) := w(i);
+        tmp(PC1_TABLE(i)) := w(i);
       end loop;
+      result := tmp(1 to 7) & tmp(9 to 15) & tmp(17 to 23) & tmp(25 to 31) & tmp(33 to 39) & tmp(41 to 47) & tmp(49 to 55) & tmp(57 to 63);
       return result;
   end function pc1_inv;
 

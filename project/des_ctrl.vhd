@@ -6,6 +6,7 @@ library IEEE;
 library WORK;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.all;
+use IEEE.STD_LOGIC_UNSIGNED.all;
 use WORK.des_pkg.all;
 
 entity des_ctrl is
@@ -28,7 +29,7 @@ architecture rtl of des_ctrl is
                 sresetn : in std_ulogic;
                 p_in    : in w64;       --input plaintext
                 key     : in w56;       --key
-                index   : natural range(0 to DES_NUMBER-1);
+                index   : natural range 0 to DES_NUMBER-1;
                 p_out   : out w64;      --output cyphered plaintext
                 cd16    : out w56       --cd16 represents the permutated key
         );
@@ -63,7 +64,7 @@ architecture rtl of des_ctrl is
 
     -- signals
 
-    type state is (IDLE, LOAD_KEY, WAIT_PIPE, COMPARE, FOUND, NOT_FOUND);
+    type state is (IDLE, WAIT_PIPE, COMPARE, FND);
     signal c_state, n_state     : state;
 
     type cd16_array is array (0 to DES_NUMBER-1) of w56;
@@ -72,9 +73,7 @@ architecture rtl of des_ctrl is
     signal end_count        : std_ulogic;
     signal found_local      : std_ulogic;
     signal found_array      : std_ulogic_vector(0 to DES_NUMBER-1);
-    signal overflow         : std_ulogic;
     signal key_inc          : std_ulogic;
-    signal mux_sel          : std_ulogic;
     signal p_out_array      : des_out_array;
     signal p_out_array_s    : des_out_array;
     signal cd16             : cd16_array;
@@ -85,23 +84,28 @@ begin
 
     des_wrap_gen: for i in 0 to DES_NUMBER-1 generate
         des_wrap_i:     des_wrap    port map(clk, sresetn, p, key, i, p_out_array(i), cd16(i));
-        reg_des_ciph_i: reg         port map(clk, sresetn, p_out_array(i), p_out_array_s(i));
-        reg_des_cd16_i: reg         port map(clk, sresetn, cd16(i), cd16_s(i));
-        comparator_i:   comparator  port map(c, p_out_array_s(i), found_array(i));
+        reg_des_ciph_i: reg         generic map (64) port map(clk, sresetn, p_out_array(i), p_out_array_s(i));
+        reg_des_cd16_i: reg         generic map (56) port map(clk, sresetn, cd16(i), cd16_s(i));
+        comparator_i:   comparator  generic map (64) port map(c, p_out_array_s(i), found_array(i));
     end generate;
 
     p_mux: process(cd16_s, found_array)
     begin
-        for i in 0 to DES_NUMBER-1 loop
-            if (found_array(i)='1') then
-                cd16_mux <= cd16_s(i);
-            end if;
-        end loop;
+        if (found_local='1') then
+            for i in 0 to DES_NUMBER-1 loop
+                if (found_array(i)='1') then
+                    cd16_mux <= cd16_s(i);
+
+                end if;
+            end loop;
+        else
+           cd16_mux <= (others => '-');
+        end if;
     end process;
 
     k1 <= pc1_inv(cd16_mux);
 
-    p_found: process(found_local)
+    p_found: process(found_array)
         variable tmp : std_ulogic;
     begin
         tmp := '0';
@@ -110,8 +114,6 @@ begin
         end loop;
         found_local <= tmp;
     end process;
-
-    found <= found_local;
 
     counter_0: counter generic map(18) port map(clk, sresetn, start, inc_count, end_count);
 
@@ -171,12 +173,12 @@ begin
 
             when COMPARE =>
                 if (found_local = '1') then
-                    n_state <= FOUND;
+                    n_state <= FND;
                 end if;
 
                 key_inc <= '1';
 
-            when FOUND =>
+            when FND =>
                 n_state <= IDLE;
                 found <= '1';
 

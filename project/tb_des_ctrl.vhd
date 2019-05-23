@@ -3,6 +3,7 @@
 -- File         :   tb_des_ctrl.vhd
 ------------------------------------------------------------
 library ieee;
+library WORK;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.math_real.all;
@@ -102,8 +103,14 @@ end package body rnd_pkg;
 -----------------------------------------------------------
 -----------------------------------------------------------
 
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
 
-entity key_round_sis
+entity key_round_s is
   port(
     c_in   : in w28;
     d_in   : in w28;
@@ -112,7 +119,7 @@ entity key_round_sis
     d_out  : out w28;
     k_out  : out w48
   );
-end entity key_round;
+end entity key_round_s;
 
 architecture rtl of key_round_s is
 
@@ -130,6 +137,14 @@ begin
   d_out <= d_local;
 
 end rtl;
+
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
+
 
 entity key_gen_s is
   port (
@@ -169,6 +184,12 @@ begin
 end rtl;
 
 
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
 
 entity s_box_s is
     port(   s_in    : in std_ulogic_vector(0 to 5);
@@ -191,6 +212,14 @@ begin
     s_out <= s_table(row_index, col_index);
 
 end architecture rtl;
+
+
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
 
 
 entity cipher_f_s is
@@ -221,12 +250,21 @@ begin
     x_local <= e_local xor k;
 
     gen_s_box_s: for i in 0 to 7 generate
-        s_box_s_i: s_box_s port map(x_local(i*6+1 to i*6+6), s_box_sES(i), s_local(i*4+1 to i*4+4));
+        s_box_s_i: s_box_s port map(x_local(i*6+1 to i*6+6), S_BOXES(i), s_local(i*4+1 to i*4+4));
     end generate;
 
     f_out <= p(s_local);    --p permutation
 
 end architecture rtl;
+
+
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
+
 
 entity f_wrapper_s is
     port(   l       : in w32;
@@ -256,10 +294,18 @@ begin
 end architecture rtl;
 
 
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
+
+
 entity des_sim is
     port(   p_in    : in w64;       --input plaintext
             key     : in w64;       --key
-            p_out   : out w64;      --output cyphered plaintext
+            p_out   : out w64       --output cyphered plaintext
     );
 end entity des_sim;
 
@@ -315,15 +361,26 @@ end architecture rtl;
 ---------------------------------------------------------
 ---------------------------------------------------------
 ---------------------------------------------------------
-
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.STD_LOGIC_UNSIGNED.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
+use work.rnd_pkg.all;
 
 entity des_ref is
-    port(   p           : out std_ulogic_vector(63 downto 0);
+    port(   clk         : in std_ulogic;
+            sresetn     : in std_ulogic;
+            start       : out std_ulogic;
+            p           : out std_ulogic_vector(63 downto 0);
             c           : out std_ulogic_vector(63 downto 0);
-            k0          : out std_ulogic_vector(55 downto 0);    -- starting key
+            k0          : out std_ulogic_vector(55 downto 0);   -- starting key
             k           : out std_ulogic_vector(55 downto 0);   -- last tried key
             k1          : out std_ulogic_vector(55 downto 0);   --found key
-            found       : out std_ulogic
+            found       : out std_ulogic;
+            evaluate    : out std_ulogic
     );
 end entity des_ref;
 
@@ -334,24 +391,88 @@ architecture beh of des_ref is
     component des_sim
         port(   p_in    : in w64;       --input plaintext
                 key     : in w64;       --key
-                p_out   : out w64;      --output cyphered plaintext
+                p_out   : out w64       --output cyphered plaintext
         );
     end component des_sim;
 
+    signal p_in     : w64;
+    signal key      : w64;
+    signal p_out    : w64;
+
+    constant PIPE_STAGES : natural := 17;
 
 begin
+
+    des_sim_u : entity work.des_sim(rtl)
+    port map(
+        p_in    => p_in,
+        key     => key,
+        p_out   => p_out
+    );
 
     process
         variable rg     : rnd_generator;
         variable d_k    : integer;  --distance between k0 and k
-        variable k0_loc : std_ulogic_vector(55 downto 0);
-        variable k_loc  : std_ulogic_vector(55 downto 0);
-        variable p_loc  : std_ulogic_vector(63 downto 0);
-        variable c_loc  : std_ulogic_vector(63 downto 0);
-        variable k1_loc : std_ulogic_vector(55 downto 0);
-        variable found  : std_ulogic;
+        variable k0_loc : w56;
+        variable k_loc  : w56;
+        variable p_loc  : w64;
+        variable c_loc  : w64;
+        variable k1_loc : w56;
+        variable n_iter : natural;
     begin
-
+        --wait for reset off
+        start <= '0';
+        p <= (others => '0');
+        c <= (others => '0');
+        k0 <= (others => '0');
+        k <= (others => '0');
+        k1 <= (others => '0');
+        found <= '0';
+        evaluate <= '0';
+        wait until sresetn='1' and clk='1' and clk'event;
+        loop
+            evaluate <= '0';
+            --start <= '0';
+            p <= (others => '0');
+            c <= (others => '0');
+            k0 <= (others => '0');
+            k <= (others => '0');
+            k1 <= (others => '0');
+            found <= '0';
+            --generate new plaintext
+            p_loc := rg.get_std_ulogic_vector(64);
+            --generate k0
+            k0_loc := rg.get_std_ulogic_vector(56);
+            --generate difference btw k and k0
+            d_k := rg.get_integer(10, 2048);
+            --calculate k
+            k1_loc := k0_loc + d_k;
+            --calculate ciphertext
+            p_in <= p_loc;
+            key <= k1_loc(1 to 7) & '0' & k1_loc(8 to 14) & '0' & k1_loc(15 to 21) & '0' & k1_loc(22 to 28) & '0' & k1_loc(29 to 35) & '0' & k1_loc(36 to 42) & '0' & k1_loc(43 to 49) & '0' & k1_loc(50 to 56) & '0';
+            wait until clk='1' and clk'event;
+            --prepare input stimululus
+            c_loc := p_out;
+            start <= '1';
+            p <= p_loc;
+            c <= c_loc;
+            k0 <= k0_loc;
+            k <= k0_loc;
+            k1 <= k1_loc;
+            wait until clk='1' and clk'event;
+            --now start generating signals for comparison
+            start <= '0';
+            n_iter := d_k / DES_NUMBER + 1 + PIPE_STAGES;
+            wait until clk='1' and clk'event;
+            k <= k + DES_NUMBER;
+            evaluate <= '1';
+            for i in 1 to n_iter-1 loop
+                wait until clk='1' and clk'event;
+                k <= k + DES_NUMBER;
+            end loop;
+            found <= '1';
+            wait until clk='1' and clk'event;
+        end loop;
     end process;
 end architecture;
 
@@ -364,13 +485,34 @@ end architecture;
 
 use std.textio.all;
 use std.env.all;
-
+library ieee;
+library WORK;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+use ieee.math_real.all;
+use WORK.des_pkg.all;
 use work.rnd_pkg.all;
+
 
 entity tb_des_ctrl is
 end tb_des_ctrl;
 
 architecture tb of tb_des_ctrl is
+
+    component des_ref
+        port(   clk         : in std_ulogic;
+                sresetn     : in std_ulogic;
+                start       : out std_ulogic;
+                p           : out std_ulogic_vector(63 downto 0);
+                c           : out std_ulogic_vector(63 downto 0);
+                k0          : out std_ulogic_vector(55 downto 0);   -- starting key
+                k           : out std_ulogic_vector(55 downto 0);   -- last tried key
+                k1          : out std_ulogic_vector(55 downto 0);   --found key
+                found       : out std_ulogic;
+                evaluate    : out std_ulogic
+        );
+    end component des_ref;
+
 
     component des_ctrl
         port (clk     : in std_ulogic;
@@ -384,21 +526,39 @@ architecture tb of tb_des_ctrl is
               found   : out std_ulogic);
     end component;
 
-    signal clk     : std_ulogic;
-    signal sresetn : std_ulogic;
-    signal start   : std_ulogic;
-    signal p       : std_ulogic_vector (63 downto 0);
-    signal c       : std_ulogic_vector (63 downto 0);
-    signal k0      : std_ulogic_vector (55 downto 0);
-    signal k       : std_ulogic_vector (55 downto 0);
-    signal k1      : std_ulogic_vector (55 downto 0);
-    signal found   : std_ulogic;
+    signal clk      : std_ulogic;
+    signal sresetn  : std_ulogic;
+    signal start    : std_ulogic;
+    signal p        : std_ulogic_vector (63 downto 0);
+    signal c        : std_ulogic_vector (63 downto 0);
+    signal k0       : std_ulogic_vector (55 downto 0);
+    signal k_ref    : std_ulogic_vector (55 downto 0);
+    signal k        : std_ulogic_vector (55 downto 0);
+    signal k1_ref   : std_ulogic_vector (55 downto 0);
+    signal k1       : std_ulogic_vector (55 downto 0);
+    signal found_ref: std_ulogic;
+    signal found    : std_ulogic;
+    signal evaluate : std_ulogic;
 
-    constant TbPeriod : time := 10 ns;
-    signal TbClock : std_logic := '0';
-    signal TbSimEnded : std_logic := '0';
+    constant TbPeriod   : time := 10 ns;
+    signal TbClock      : std_logic := '0';
+    signal TbSimEnded   : std_logic := '0';
 
 begin
+
+
+    ref : des_ref
+    port map (clk       => clk,
+              sresetn   => sresetn,
+              start     => start,
+              p         => p,
+              c         => c,
+              k0        => k0,
+              k         => k_ref,
+              k1        => k1_ref,
+              found     => found_ref,
+              evaluate  => evaluate);
+
 
     dut : des_ctrl
     port map (clk     => clk,
@@ -416,26 +576,62 @@ begin
 
     clk <= TbClock;
 
-    stimuli : process
+    stimulus: process
+        variable l : line;
     begin
-        -- Init
-        start <= '0';
-        p <= (others => '0');
-        c <= (others => '0');
-        k0 <= (others => '0');
-
         -- Reset generation
         sresetn <= '0';
         wait for 100 ns;
         sresetn <= '1';
-        wait for 100 ns;
+        wait until clk='1' and clk'event;
 
-        -- EDIT Add stimuli here
-        wait for 100 * TbPeriod;
-
+        wait for 200 us;
         -- Stop the clock and hence terminate the simulation
         TbSimEnded <= '1';
-        wait;
+		write(l, string'("NON REGRESSION TEST PASSED - "));
+		write(l, now);
+		writeline(output, l);
+        finish;
+    end process;
+
+    process
+        variable l : line;
+    begin
+    wait until clk='1' and clk'event;
+    if (evaluate='1') then
+    	if (found_ref /= found and found_ref = '1') then
+    		write(l, string'("NON REGRESSION TEST FAILED - "));
+    		write(l, now);
+    		writeline(output, l);
+    		write(l, string'("  found SHOULD HAVE BEEN ASSERTED"));
+    		writeline(output, l);
+    		finish;
+    	end if;
+    	if (found_ref /= found and found = '1') then
+    		write(l, string'("NON REGRESSION TEST FAILED - "));
+    		write(l, now);
+    		writeline(output, l);
+    		write(l, string'("  found SHOULD HAVE NOT BEEN ASSERTED"));
+    		writeline(output, l);
+    		finish;
+    	end if;
+    	if not (k_ref = k) then
+    		write(l, string'("NON REGRESSION TEST FAILED - "));
+    		write(l, now);
+    		writeline(output, l);
+    		write(l, string'("  k SHOULD HAVE BEEN UPDATED"));
+    		writeline(output, l);
+    		finish;
+    	end if;
+    	if (k1_ref /= k1 and found = '1') then
+    		write(l, string'("NON REGRESSION TEST FAILED - "));
+    		write(l, now);
+    		writeline(output, l);
+            write(l, string'("  WRONG KEY FOUND"));
+    		writeline(output, l);
+    		finish;
+    	end if;
+    end if;
     end process;
 
 end tb;
