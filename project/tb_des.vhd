@@ -103,8 +103,8 @@ begin
 
 			hread(resultline, reads);
 
-			assert (p_out = readcypher) report "Wrong result! DES failure.. Result:" & integer'image(to_integer(signed(p_out)))
-																&" Expected:" & integer'image(to_integer(signed(reads(64 downto 0))));
+			assert (p_out = readcypher) report "Wrong result! DES failure.. Result:" & to_hstring(p_out)
+																&" Expected:" & & to_hstring(p_out);
 
 		end loop;
 
