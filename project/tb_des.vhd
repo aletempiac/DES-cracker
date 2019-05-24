@@ -22,7 +22,7 @@ architecture rtl of tb_des is
                 sresetn : in std_ulogic;
                 p_in    : in w64;       --input plaintext
                 key     : in w64;       --key
-                p_out   : out w64       --output cyphered plaintext
+                p_out   : out w64       --output ciphereded plaintext
             );
     end component des;
 
@@ -56,7 +56,7 @@ begin
 		VARIABLE readp_in	: w64;
         VARIABLE readkey	: w64;
 		VARIABLE space     	: character;
-
+    begin
 		file_open(vectorfile, "vector.txt", read_mode);
 
         sresetn <= '0';
@@ -75,10 +75,10 @@ begin
 			hread(inputline, readkey);	--read key
 
 			p_in <= readp_in;
-			key <=readkey;
+			key <= readkey;
 
-
-			-- wait for clk_period*15;
+            -- wait until clk='1' and clk'event;
+			wait for clk_period;
 		end loop;
 
 		file_close(vectorfile);
@@ -89,11 +89,11 @@ begin
 	output_proc : process
 		FILE 	expectedfile 	: text;
 		VARIABLE resultline 	: line;
-        VARIABLE readcypher     : w64;
+        VARIABLE readciphered     : w64;
 	begin
 
 		file_open(expectedfile, "expected.txt", read_mode);
-
+        wait for 100 ns;
         wait for clk_period*15;
 
 		wait until clk='1' AND clk'event;
@@ -101,11 +101,10 @@ begin
 		while not endfile(expectedfile) loop
 			readline(expectedfile, resultline);
 
-			hread(resultline, reads);
+			hread(resultline, readciphered);
 
-			assert (p_out = readcypher) report "Wrong result! DES failure.. Result:" & to_hstring(p_out)
-																&" Expected:" & & to_hstring(p_out);
-
+			assert (p_out = readciphered) report "Wrong result! DES failure.. Result:" & to_hstring(p_out) &" Expected:" & to_hstring(readciphered);
+            wait for clk_period;
 		end loop;
 
 		file_close(expectedfile);
