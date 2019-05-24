@@ -399,7 +399,6 @@ architecture beh of des_ref is
     signal key      : w64;
     signal p_out    : w64;
 
-    constant PIPE_STAGES : natural := 17;
 
 begin
 
@@ -444,7 +443,7 @@ begin
             --generate k0
             k0_loc := rg.get_std_ulogic_vector(56);
             --generate difference btw k and k0
-            d_k := rg.get_integer(10, 2048);
+            d_k := rg.get_integer(0, 20000);
             --calculate k
             k1_loc := k0_loc + d_k;
             --calculate ciphertext

@@ -115,7 +115,7 @@ begin
         found_local <= tmp;
     end process;
 
-    counter_0: counter generic map(18) port map(clk, sresetn, start, inc_count, end_count);
+    counter_0: counter generic map(PIPE_STAGES-1) port map(clk, sresetn, start, inc_count, end_count);
 
     p_key_inc: process(clk)
     begin
