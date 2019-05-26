@@ -151,8 +151,17 @@ begin
         case c_state is
             when IDLE =>
                 if (start = '1') then
+                    --n_state <= LOAD_KEY;
                     n_state <= WAIT_PIPE;
                 end if;
+
+            --when LOAD_KEY =>
+
+               -- n_state <= WAIT_PIPE;
+
+                --key_inc <= '0';
+                --inc_count <= '1';
+
 
             when WAIT_PIPE =>
                 if (end_count = '1') then
@@ -165,8 +174,6 @@ begin
             when COMPARE =>
                 if (found_local = '1') then
                     n_state <= FND;
-                elsif (start = '1') then
-                    n_state <= WAIT_PIPE;
                 end if;
 
                 key_inc <= '1';
