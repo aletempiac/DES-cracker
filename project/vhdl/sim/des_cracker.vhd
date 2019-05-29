@@ -40,6 +40,7 @@ architecture rtl of des_cracker is
     port(   clk         : in std_ulogic;
             sresetn     : in std_ulogic;
             start       : in std_ulogic;
+            stop        : in std_ulogic;
             p           : in std_ulogic_vector(63 downto 0);
             c           : in std_ulogic_vector(63 downto 0);
             k0          : in std_ulogic_vector(55 downto 0);    -- starting key
@@ -50,6 +51,7 @@ architecture rtl of des_cracker is
     end component;
 
     signal start    : std_ulogic;
+    signal stop     : std_ulogic;
     signal p        : std_ulogic_vector(63 downto 0);   --0x000
     signal c        : std_ulogic_vector(63 downto 0);   --0x008
     signal k0       : std_ulogic_vector(55 downto 0);   --0x010
@@ -57,11 +59,16 @@ architecture rtl of des_cracker is
     signal k1       : std_ulogic_vector(55 downto 0);   --0x020
     signal found    : std_ulogic;
 
+    signal k_s      : std_ulogic_vector(55 downto 0);
+    signal k1_s     : std_ulogic_vector(55 downto 0);   --0x020
+    signal k_read   : std_ulogic;
+
     --state machine signals
     type state_type_r is (WAIT_V, ACK_R, WAIT_R);
     signal c_state_r, n_state_r : state_type_r;
     type state_type_w is (WAIT_V, ACK_R, WAIT_R);
     signal c_state_w, n_state_w : state_type_w;
+
 
     constant OKAY   : std_ulogic_vector(1 downto 0) := "00";
     constant EXOKAY : std_ulogic_vector(1 downto 0) := "01";
@@ -70,34 +77,37 @@ architecture rtl of des_cracker is
 
 begin
 
+    des_ctrl_0 : des_ctrl
+    port map (clk     => aclk,
+              sresetn   => aresetn,
+              start     => start,
+              stop      => stop,
+              p         => p,
+              c         => c,
+              k0        => k0,
+              k         => k_val,
+              k1        => k1,
+              found     => found);
+
 
     process(aclk)
     begin
         if (aclk='1' and aclk'event) then
             if (aresetn='0') then
-                start <= '0';
-                p <= (others=>'0');
-                c <= (others=>'0');
-                k0 <= (others=>'0');
-                found <= '0';
+                k1_s    <= (others => '0');
+                k_s     <= (others => '0');
+                found_s <= '0';
             else
-                if(dso='1') then
-                    last <= '1';
-                    rh_last <= rh;
-                    t_last <= t;
-                    perr_last <= perr;
-                    cerr_last <= cerr;
-                    if(perr='0' and cerr='0') then
-                        ok <= '1';
-                        rh_ok <= rh;
-                        t_ok <= t;
-                    end if;
+                k1_s    <= k1;
+                if (k_read='0') then
+                    k_s <= k;
                 end if;
+                irq     <= found;
             end if;
         end if;
     end process;
 
-    led(3 downto 0) <= k(33 downto 30);
+    led(3 downto 0) <= k_s(33 downto 30);
 
     p_sread: process(aclk)
     begin
@@ -153,6 +163,7 @@ begin
                 s0_axi_rresp <= OKAY;
                 s0_axi_rdata <= (others=>'0');
             else
+                k_read <= '0';
                 if (n_state_r=ACK_R) then
                     if (s0_axi_araddr(11 downto 2)="0000000000") then
                         s0_axi_rresp <= OKAY;
@@ -168,18 +179,26 @@ begin
                         s0_axi_rdata <= c(63 downto 32);
                     elsif (s0_axi_araddr(11 downto 2)="0000000100") then
                         s0_axi_rresp <= OKAY;
-                        s0_axi_rdata <= k(31 downto 0);
+                        s0_axi_rdata <= k0(31 downto 0);
                     elsif (s0_axi_araddr(11 downto 2)="0000000101") then
                         s0_axi_rresp <= OKAY;
                         s0_axi_rdata(63 downto 56) <= (others => '0');
-                        s0_axi_rdata(55 downto 32) <= k1(55 downto 32);
+                        s0_axi_rdata(55 downto 32) <= k0(55 downto 32);
                     elsif (s0_axi_araddr(11 downto 2)="0000000110") then
                         s0_axi_rresp <= OKAY;
-                        s0_axi_rdata <= k1(31 downto 0);
+                        s0_axi_rdata <= k_s(31 downto 0);
+                        k_read       <= '1';    --to stop the update of k during reading
                     elsif (s0_axi_araddr(11 downto 2)="0000000111") then
                         s0_axi_rresp <= OKAY;
                         s0_axi_rdata(63 downto 56) <= (others => '0');
-                        s0_axi_rdata(55 downto 32) <= k1(55 downto 32);
+                        s0_axi_rdata(55 downto 32) <= k_s(55 downto 32);
+                    elsif (s0_axi_araddr(11 downto 2)="0000001000") then
+                        s0_axi_rresp <= OKAY;
+                        s0_axi_rdata <= k1_s(31 downto 0);
+                    elsif (s0_axi_araddr(11 downto 2)="0000001001") then
+                        s0_axi_rresp <= OKAY;
+                        s0_axi_rdata(63 downto 56) <= (others => '0');
+                        s0_axi_rdata(55 downto 32) <= k1_s(55 downto 32);
                     else
                         s0_axi_rresp <= DECERR;
                         s0_axi_rdata<= (others=>'0');
@@ -252,13 +271,46 @@ begin
                 s0_axi_bresp <= OKAY;
             else
                 if (n_state_w=ACK_R) then
-                    if (s0_axi_awaddr(11 downto 4)="00000000") then
+                    if (s0_axi_awaddr(11 downto 2)="0000000000") then
                         s0_axi_bresp <= OKAY;
-                    elsif (s0_axi_awaddr(11 downto 4)="00000001") then
+                        p(31 downto 0) <= s0_axi_wdata;
+                    if (s0_axi_awaddr(11 downto 2)="0000000001") then
+                        s0_axi_bresp <= OKAY;
+                        p(63 downto 32) <= s0_axi_wdata;
+                    if (s0_axi_awaddr(11 downto 2)="0000000010") then
+                        s0_axi_bresp <= OKAY;
+                        c(31 downto 0) <= s0_axi_wdata;
+                    if (s0_axi_awaddr(11 downto 2)="0000000011") then
+                        s0_axi_bresp <= OKAY;
+                        c(63 downto 32) <= s0_axi_wdata;
+                    if (s0_axi_awaddr(11 downto 2)="0000000100") then
+                        s0_axi_bresp <= OKAY;
+                        k0(31 downto 0) <= s0_axi_wdata;
+                    if (s0_axi_awaddr(11 downto 2)="0000000101") then
+                        s0_axi_bresp <= OKAY;
+                        k0(63 downto 32) <= s0_axi_wdata;
+                    elsif (s0_axi_awaddr(11 downto 3)="000000011") then
+                        s0_axi_bresp <= SLVERR;
+                    elsif (s0_axi_awaddr(11 downto 3)="000000100") then
                         s0_axi_bresp <= SLVERR;
                     else
                         s0_axi_bresp <= DECERR;
                     end if;
+                end if;
+            end if;
+        end if;
+    end process;
+
+    p_startstop: process(ack)
+    begin
+        if (aclk='1' and aclk'event) then
+            start   <= '0';
+            stop    <= '0';
+            if (n_state_w=ACK_R) then
+                if (s0_axi_awaddr(11 downto 2)="0000000100") then
+                    stop    <= '1';
+                elsif (s0_axi_awaddr(11 downto 2)="0000000101") then
+                    start   <= '1';
                 end if;
             end if;
         end if;

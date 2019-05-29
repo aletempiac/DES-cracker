@@ -14,6 +14,7 @@ package rnd_pkg is
 	type rnd_generator is protected
 		procedure init(s1, s2: positive);
 		impure function get_boolean return boolean;
+		impure function get_boolean_p(p : real) return boolean;
 		impure function get_integer(min, max: integer) return integer;
 		impure function get_bit return bit;
 		impure function get_bit_vector(size: positive) return bit_vector;
@@ -47,6 +48,12 @@ package body rnd_pkg is
 			throw;
 			return rnd < 0.5;
 		end function get_boolean;
+
+		impure function get_boolean_p(p : real) return boolean is
+		begin
+			throw;
+			return rnd < p;
+		end function get_boolean_p;
 
 		impure function get_integer(min, max: integer) return integer is
 			variable tmp: integer;
@@ -374,6 +381,7 @@ entity des_ref is
     port(   clk         : in std_ulogic;
             sresetn     : in std_ulogic;
             start       : out std_ulogic;
+            stop        : out std_ulogic;
             p           : out std_ulogic_vector(63 downto 0);
             c           : out std_ulogic_vector(63 downto 0);
             k0          : out std_ulogic_vector(55 downto 0);   -- starting key
@@ -418,9 +426,13 @@ begin
         variable c_loc  : w64;
         variable k1_loc : w56;
         variable n_iter : natural;
+        variable stop_b : boolean;
+        variable stop_i : natural;
+        variable start_d: integer;
     begin
         --wait for reset off
         start <= '0';
+        stop <= '1';
         p <= (others => '0');
         c <= (others => '0');
         k0 <= (others => '0');
@@ -432,6 +444,7 @@ begin
         loop
             evaluate <= '0';
             --start <= '0';
+            stop <= '0';
             p <= (others => '0');
             c <= (others => '0');
             k0 <= (others => '0');
@@ -443,7 +456,12 @@ begin
             --generate k0
             k0_loc := rg.get_std_ulogic_vector(56);
             --generate difference btw k and k0
-            d_k := rg.get_integer(0, 20000);
+            d_k := rg.get_integer(0, 10000);
+            --generate probability of stopping
+            stop_b := rg.get_boolean_p(0.2);
+            stop_i := rg.get_integer(1, d_k);
+            --generate start delay
+            start_d := rg.get_integer(0, 30);
             --calculate k
             k1_loc := k0_loc + d_k;
             --calculate ciphertext
@@ -461,7 +479,11 @@ begin
             wait until clk='1' and clk'event;
             --now start generating signals for comparison
             start <= '0';
-            n_iter := d_k / DES_NUMBER + 1 + PIPE_STAGES;
+            if (stop_b=true) then
+                n_iter := (d_k - stop_i) / DES_NUMBER + 1 + PIPE_STAGES;
+            else
+                n_iter := d_k / DES_NUMBER + 1 + PIPE_STAGES;
+            end if;
             wait until clk='1' and clk'event;
             k <= k + DES_NUMBER;
             evaluate <= '1';
@@ -469,8 +491,17 @@ begin
                 wait until clk='1' and clk'event;
                 k <= k + DES_NUMBER;
             end loop;
-            found <= '1';
+            if (stop_b=true) then
+                stop <= '1';
+            else
+                found <= '1';
+            end if;
             wait until clk='1' and clk'event;
+            evaluate <= '0';
+            found <= '0';
+            for i in 0 to start_d-2 loop
+                wait until clk='1' and clk'event;
+            end loop;
         end loop;
     end process;
 end architecture;
@@ -502,6 +533,7 @@ architecture tb of tb_des_ctrl is
         port(   clk         : in std_ulogic;
                 sresetn     : in std_ulogic;
                 start       : out std_ulogic;
+                stop        : out std_ulogic;
                 p           : out std_ulogic_vector(63 downto 0);
                 c           : out std_ulogic_vector(63 downto 0);
                 k0          : out std_ulogic_vector(55 downto 0);   -- starting key
@@ -517,6 +549,7 @@ architecture tb of tb_des_ctrl is
         port (clk     : in std_ulogic;
               sresetn : in std_ulogic;
               start   : in std_ulogic;
+              stop    : in std_ulogic;
               p       : in std_ulogic_vector (63 downto 0);
               c       : in std_ulogic_vector (63 downto 0);
               k0      : in std_ulogic_vector (55 downto 0);
@@ -528,6 +561,7 @@ architecture tb of tb_des_ctrl is
     signal clk      : std_ulogic;
     signal sresetn  : std_ulogic;
     signal start    : std_ulogic;
+    signal stop     : std_ulogic;
     signal p        : std_ulogic_vector (63 downto 0);
     signal c        : std_ulogic_vector (63 downto 0);
     signal k0       : std_ulogic_vector (55 downto 0);
@@ -550,6 +584,7 @@ begin
     port map (clk       => clk,
               sresetn   => sresetn,
               start     => start,
+              stop      => stop,
               p         => p,
               c         => c,
               k0        => k0,
@@ -563,6 +598,7 @@ begin
     port map (clk     => clk,
               sresetn => sresetn,
               start   => start,
+              stop    => stop,
               p       => p,
               c       => c,
               k0      => k0,
@@ -597,23 +633,23 @@ begin
         variable l : line;
     begin
     wait until clk='1' and clk'event;
+    if (found_ref /= found and found_ref = '1') then
+    	write(l, string'("NON REGRESSION TEST FAILED - "));
+    	write(l, now);
+    	writeline(output, l);
+    	write(l, string'("  found SHOULD HAVE BEEN ASSERTED"));
+    	writeline(output, l);
+    	finish;
+    end if;
+    if (found_ref /= found and found = '1') then
+    	write(l, string'("NON REGRESSION TEST FAILED - "));
+    	write(l, now);
+    	writeline(output, l);
+    	write(l, string'("  found SHOULD HAVE NOT BEEN ASSERTED"));
+    	writeline(output, l);
+        finish;
+    end if;
     if (evaluate='1') then
-    	if (found_ref /= found and found_ref = '1') then
-    		write(l, string'("NON REGRESSION TEST FAILED - "));
-    		write(l, now);
-    		writeline(output, l);
-    		write(l, string'("  found SHOULD HAVE BEEN ASSERTED"));
-    		writeline(output, l);
-    		finish;
-    	end if;
-    	if (found_ref /= found and found = '1') then
-    		write(l, string'("NON REGRESSION TEST FAILED - "));
-    		write(l, now);
-    		writeline(output, l);
-    		write(l, string'("  found SHOULD HAVE NOT BEEN ASSERTED"));
-    		writeline(output, l);
-    		finish;
-    	end if;
     	if not (k_ref = k) then
     		write(l, string'("NON REGRESSION TEST FAILED - "));
     		write(l, now);
