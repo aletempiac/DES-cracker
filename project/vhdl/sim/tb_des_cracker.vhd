@@ -792,7 +792,6 @@ begin
 
 	-- Submit AXI4 lite write requests
     process
-        variable l : line;
 		variable rg: rnd_generator;
         variable dw: boolean;
         variable pc: boolean;
@@ -804,6 +803,7 @@ begin
             s0_axi_bvalid_ref <= '0';
             s0_axi_bready <= '0';
             s0_axi_bresp_ref <= axi_resp_okay;
+            s0_axi_wstrb <= "1111";
 
             wait until start='1' or stop='1' or writep='1' or writec='1';
             --when a trigger event signal do a write request
@@ -897,6 +897,103 @@ begin
                 s0_axi_wready_ref <= '0';
                 s0_axi_bvalid_ref <= '0';
 
+            end if;
+        end loop;
+    end process;
+
+    process
+		variable rg: rnd_generator;
+        variable rd: boolean;
+        variable jp: boolean;
+        variable br: integer;
+    begin
+        s0_axi_araddr <= (others => '0');
+        s0_axi_arvalid <= '0';
+        s0_axi_rready <= '0';
+        s0_axi_arready_ref <= '0';
+        s0_axi_rdata_ref <= (others => '-');
+        s0_axi_rresp_ref <= axi_resp_okay;
+        s0_axi_rvalid_ref <= '0';
+
+        loop
+            br := rg.get_integer(0, 100)
+            for i in 0 to br loop
+                wait until aclk='1' and aclk'event;
+            end loop;
+            --read a random register
+            rd := rg.get_integer(0, 10);
+            s0_axi_arvalid <= '1';
+            if (rd=1) then
+                s0_axi_araddr <= "000000000000";
+            elsif (rd=2) then
+                s0_axi_araddr <= "000000000100";
+            elsif (rd=3) then
+                s0_axi_araddr <= "000000001000";
+            elsif (rd=4) then
+                s0_axi_araddr <= "000000001100";
+            elsif (rd=5) then
+                s0_axi_araddr <= "000000010000";
+            elsif (rd=6) then
+                s0_axi_araddr <= "000000010100";
+            elsif (rd=7) then
+                s0_axi_araddr <= "000000011000";
+            elsif (rd=8) then
+                s0_axi_araddr <= "000000011100";
+            elsif (rd=9) then
+                s0_axi_araddr <= "000000100000";
+            elsif (rd=10) then
+                s0_axi_araddr <= "000000100100";
+            end if;
+
+            wait until aclk='1' and aclk'event;
+
+            jp := rg.get_boolean;
+            if (jp=true) then
+                s0_axi_rready <= '1';
+                s0_axi_arready_ref <= '1';
+                s0_axi_rvalid_ref <= '1';
+            else
+                s0_axi_rready <= '0';
+                s0_axi_arready_ref <= '1';
+                s0_axi_rvalid_ref <= '1';
+                wait until aclk='1' and aclk'event;
+                s0_axi_rready <= '1';
+                s0_axi_arready_ref <= '0';
+                s0_axi_rvalid_ref <= '1';
+            end if;
+
+            if (rd=1) then
+                s0_axi_rdata_ref <= p(31 downto 0);
+            elsif (rd=2) then
+                s0_axi_rdata_ref <= p(63 downto 32);
+            elsif (rd=3) then
+                s0_axi_rdata_ref <= c(31 downto 0);
+            elsif (rd=4) then
+                s0_axi_rdata_ref <= c(63 downto 32);
+            elsif (rd=5) then
+                s0_axi_rdata_ref <= k0(31 downto 0);
+            elsif (rd=6) then
+                s0_axi_rdata_ref <= k0(55 downto 32);
+            elsif (rd=7) then
+                s0_axi_rdata_ref <= k(31 downto 0);
+            elsif (rd=8) then
+                s0_axi_rdata_ref <= k(55 downto 32);
+            elsif (rd=9) then
+                s0_axi_rdata_ref <= k1(31 downto 0);
+            elsif (rd=10) then
+                s0_axi_rdata_ref <= k1(55 downto 32);
+            end if;
+
+
+            wait until aclk='1' and aclk'event;
+
+            s0_axi_rdata_ref <= (others => '-');
+
+            if (jp=false) then
+                s0_axi_arready_ref <= '0';
+                s0_axi_rvalid_ref <= '1';
+                s0_axi_rready <= '1';
+                wait until aclk='1' and aclk'event;
             end if;
         end loop;
     end process;
