@@ -62,6 +62,7 @@ architecture rtl of des_cracker is
     signal k_s      : std_ulogic_vector(55 downto 0);
     signal k1_s     : std_ulogic_vector(55 downto 0);   --0x020
     signal k_read   : std_ulogic;
+    signal found_s  : std_ulogic;
 
     --state machine signals
     type state_type_r is (WAIT_V, ACK_R, WAIT_R);
@@ -85,7 +86,7 @@ begin
               p         => p,
               c         => c,
               k0        => k0,
-              k         => k_val,
+              k         => k,
               k1        => k1,
               found     => found);
 
@@ -162,6 +163,7 @@ begin
             if (aresetn='0') then
                 s0_axi_rresp <= OKAY;
                 s0_axi_rdata <= (others=>'0');
+                k_read       <= '0';
             else
                 k_read <= '0';
                 if (n_state_r=ACK_R) then
@@ -182,23 +184,23 @@ begin
                         s0_axi_rdata <= k0(31 downto 0);
                     elsif (s0_axi_araddr(11 downto 2)="0000000101") then
                         s0_axi_rresp <= OKAY;
-                        s0_axi_rdata(63 downto 56) <= (others => '0');
-                        s0_axi_rdata(55 downto 32) <= k0(55 downto 32);
+                        s0_axi_rdata(31 downto 24) <= (others => '0');
+                        s0_axi_rdata(23 downto 0) <= k0(55 downto 32);
                     elsif (s0_axi_araddr(11 downto 2)="0000000110") then
                         s0_axi_rresp <= OKAY;
                         s0_axi_rdata <= k_s(31 downto 0);
                         k_read       <= '1';    --to stop the update of k during reading
                     elsif (s0_axi_araddr(11 downto 2)="0000000111") then
                         s0_axi_rresp <= OKAY;
-                        s0_axi_rdata(63 downto 56) <= (others => '0');
-                        s0_axi_rdata(55 downto 32) <= k_s(55 downto 32);
+                        s0_axi_rdata(31 downto 24) <= (others => '0');
+                        s0_axi_rdata(23 downto 0) <= k_s(55 downto 32);
                     elsif (s0_axi_araddr(11 downto 2)="0000001000") then
                         s0_axi_rresp <= OKAY;
                         s0_axi_rdata <= k1_s(31 downto 0);
                     elsif (s0_axi_araddr(11 downto 2)="0000001001") then
                         s0_axi_rresp <= OKAY;
-                        s0_axi_rdata(63 downto 56) <= (others => '0');
-                        s0_axi_rdata(55 downto 32) <= k1_s(55 downto 32);
+                        s0_axi_rdata(31 downto 24) <= (others => '0');
+                        s0_axi_rdata(23 downto 0) <= k1_s(55 downto 32);
                     else
                         s0_axi_rresp <= DECERR;
                         s0_axi_rdata<= (others=>'0');
@@ -274,21 +276,21 @@ begin
                     if (s0_axi_awaddr(11 downto 2)="0000000000") then
                         s0_axi_bresp <= OKAY;
                         p(31 downto 0) <= s0_axi_wdata;
-                    if (s0_axi_awaddr(11 downto 2)="0000000001") then
+                    elsif (s0_axi_awaddr(11 downto 2)="0000000001") then
                         s0_axi_bresp <= OKAY;
                         p(63 downto 32) <= s0_axi_wdata;
-                    if (s0_axi_awaddr(11 downto 2)="0000000010") then
+                    elsif (s0_axi_awaddr(11 downto 2)="0000000010") then
                         s0_axi_bresp <= OKAY;
                         c(31 downto 0) <= s0_axi_wdata;
-                    if (s0_axi_awaddr(11 downto 2)="0000000011") then
+                    elsif (s0_axi_awaddr(11 downto 2)="0000000011") then
                         s0_axi_bresp <= OKAY;
                         c(63 downto 32) <= s0_axi_wdata;
-                    if (s0_axi_awaddr(11 downto 2)="0000000100") then
+                    elsif (s0_axi_awaddr(11 downto 2)="0000000100") then
                         s0_axi_bresp <= OKAY;
                         k0(31 downto 0) <= s0_axi_wdata;
-                    if (s0_axi_awaddr(11 downto 2)="0000000101") then
+                    elsif (s0_axi_awaddr(11 downto 2)="0000000101") then
                         s0_axi_bresp <= OKAY;
-                        k0(63 downto 32) <= s0_axi_wdata;
+                        k0(55 downto 32) <= s0_axi_wdata(23 downto 0);
                     elsif (s0_axi_awaddr(11 downto 3)="000000011") then
                         s0_axi_bresp <= SLVERR;
                     elsif (s0_axi_awaddr(11 downto 3)="000000100") then
@@ -301,7 +303,7 @@ begin
         end if;
     end process;
 
-    p_startstop: process(ack)
+    p_startstop: process(aclk)
     begin
         if (aclk='1' and aclk'event) then
             start   <= '0';
