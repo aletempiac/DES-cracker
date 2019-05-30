@@ -31,7 +31,6 @@ entity des_cracker is
             irq             : out std_logic;
             led             : out std_ulogic_vector(3 downto 0)
     );
-
 end entity des_cracker;
 
 architecture rtl of des_cracker is
