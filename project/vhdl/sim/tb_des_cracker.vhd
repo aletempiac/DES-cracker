@@ -733,6 +733,7 @@ architecture tb of tb_des_cracker is
     signal irq      : std_ulogic;
     signal irq_ref  : std_ulogic;
     signal led      : std_ulogic_vector(3 downto 0);
+    signal led_ref  : std_ulogic_vector(3 downto 0);
 
     signal aclk     : std_ulogic;
     signal aresetn  : std_ulogic;
@@ -929,6 +930,7 @@ begin
         s0_axi_rresp_ref <= axi_resp_okay;
         s0_axi_rvalid_ref <= '0';
         freeze := false;
+        k_freeze <= (others => '0');
         wait for 500 ns;
         loop
             br := rg.get_integer(0, 10);
@@ -936,7 +938,7 @@ begin
                 wait until aclk='1' and aclk'event;
             end loop;
             --read a random register
-            rd := rg.get_integer(0, 8);
+            rd := rg.get_integer(0, 9);
             s0_axi_arvalid <= '1';
             if (rd=1) then
                 s0_axi_araddr <= "000000000000";
@@ -955,9 +957,11 @@ begin
             elsif (rd=8) then
                 s0_axi_araddr <= "000000011100";
             elsif (rd=9) then
-                s0_axi_araddr <= "000000100000";
-            elsif (rd=10) then
-                s0_axi_araddr <= "000000100100";
+                s0_axi_araddr <= rg.get_std_ulogic_vector(12);
+            --elsif (rd=9) then
+                --s0_axi_araddr <= "000000100000";
+            --elsif (rd=10) then
+                --s0_axi_araddr <= "000000100100";
             end if;
 
             wait until aclk='1' and aclk'event;
@@ -967,6 +971,9 @@ begin
                 s0_axi_rready <= '1';
                 s0_axi_arready_ref <= '1';
                 s0_axi_rvalid_ref <= '1';
+                if (s0_axi_araddr>=X"18" and s0_axi_araddr<X"27") then
+
+                end if;
             else
                 s0_axi_rready <= '0';
                 s0_axi_arready_ref <= '1';
@@ -1022,7 +1029,7 @@ begin
             wait until aclk='1' and aclk'event;
 
             s0_axi_arvalid <= '0';
-            s0_axi_rready <= '1';
+            s0_axi_rready <= '0';
             s0_axi_arready_ref <= '0';
             s0_axi_rvalid_ref <= '0';
             s0_axi_rdata_ref <= (others => '-');
@@ -1032,8 +1039,14 @@ begin
 
     process(aclk)
     begin
-        if (aclk='1' and clk'event) then
-            irq_ref <= found_ref;
+        if (aclk='1' and aclk'event) then
+            if (aresetn='0') then
+                irq_ref <= '0';
+                led_ref <= (others => '0');
+            else
+                irq_ref <= found_ref;
+                led_ref <= k_ref(33 downto 30);
+            end if;
         end if;
     end process;
 
@@ -1072,7 +1085,15 @@ begin
 			check_ref(v => s0_axi_rdata, r => s0_axi_rdata_ref, s => "s0_axi_rdata");
 			check_ref(v => s0_axi_rresp, r => s0_axi_rresp_ref, s => "s0_axi_rresp");
 			check_ref(v => s0_axi_rvalid, r => s0_axi_rvalid_ref, s => "s0_axi_rvalid");
-            check_ref(v => irq, v => irq_ref, s => "irq");
+			check_ref(v => s0_axi_awready, r => s0_axi_awready_ref, s => "s0_axi_awready");
+			check_ref(v => s0_axi_rdata, r => s0_axi_rdata_ref, s => "s0_axi_wdata");
+			check_ref(v => s0_axi_awready, r => s0_axi_wready_ref, s => "s0_axi_awready");
+			check_ref(v => s0_axi_bresp, r => s0_axi_bresp_ref, s => "s0_axi_bresp");
+			check_ref(v => s0_axi_bvalid, r => s0_axi_bvalid_ref, s => "s0_axi_bvalid");
+            check_ref(v => irq, r => irq_ref, s => "irq");
+            if (evaluate='1') then
+                check_ref(v => led, r => led_ref, s => "led");
+            end if;
 		end loop;
 	end process;
 

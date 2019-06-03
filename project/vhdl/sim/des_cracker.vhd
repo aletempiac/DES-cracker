@@ -97,10 +97,12 @@ begin
             if (aresetn='0') then
                 k1_s    <= (others => '0');
                 k_s     <= (others => '0');
+                led     <= (others => '0');
                 found_s <= '0';
                 irq     <= '0';
             else
                 k1_s    <= k1;
+                led(3 downto 0) <= k(33 downto 30);
                 if (k_read='0') then
                     k_s <= k;
                 else
@@ -110,8 +112,6 @@ begin
             end if;
         end if;
     end process;
-
-    led(3 downto 0) <= k_s(33 downto 30);
 
     p_sread: process(aclk)
     begin

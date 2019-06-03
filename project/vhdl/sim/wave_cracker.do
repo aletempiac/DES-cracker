@@ -30,6 +30,8 @@ add wave -noupdate /tb_des_cracker/s0_axi_bvalid
 add wave -noupdate /tb_des_cracker/s0_axi_bvalid_ref
 add wave -noupdate /tb_des_cracker/s0_axi_bready
 add wave -noupdate /tb_des_cracker/irq
+add wave -noupdate /tb_des_cracker/irq_ref
+add wave -noupdate /tb_des_cracker/led_ref
 add wave -noupdate /tb_des_cracker/led
 add wave -noupdate /tb_des_cracker/writep
 add wave -noupdate /tb_des_cracker/writec
@@ -37,11 +39,12 @@ add wave -noupdate -radix hexadecimal /tb_des_cracker/p
 add wave -noupdate -radix hexadecimal /tb_des_cracker/c
 add wave -noupdate -radix hexadecimal /tb_des_cracker/k0
 add wave -noupdate -radix hexadecimal /tb_des_cracker/k_ref
+add wave -noupdate /tb_des_cracker/k_freeze
 add wave -noupdate -radix hexadecimal /tb_des_cracker/k1_ref
 add wave -noupdate /tb_des_cracker/found_ref
 add wave -noupdate /tb_des_cracker/evaluate
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {1959722 ps} 0}
+WaveRestoreCursors {{Cursor 1} {1055000 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 264
 configure wave -valuecolwidth 126
@@ -57,4 +60,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {0 ps} {2063889 ps}
+WaveRestoreZoom {0 ps} {4200 ns}
