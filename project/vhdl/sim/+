@@ -563,7 +563,7 @@ begin
             stop_b := rg.get_boolean_p(0.2);
             stop_i := rg.get_integer(1, d_k);
             --generate start delay
-            start_d := rg.get_integer(40, 100);
+            start_d := rg.get_integer(0, 30);
             --calculate k
             k1_loc := k0_loc + d_k;
             --calculate ciphertext
@@ -573,7 +573,7 @@ begin
             key <= k1_loc(1 to 7) & '0' & k1_loc(8 to 14) & '0' & k1_loc(15 to 21) & '0' & k1_loc(22 to 28) & '0' & k1_loc(29 to 35) & '0' & k1_loc(36 to 42) & '0' & k1_loc(43 to 49) & '0' & k1_loc(50 to 56) & '0';
             wait until clk='1' and clk'event;
             writep <= '0';
-            wait_r := rg.get_integer(5, 10);
+            wait_r := rg.get_integer(1, 10);
             for i in  0 to wait_r loop
                 wait until clk='1' and clk'event;
             end loop;
@@ -583,7 +583,7 @@ begin
             writec <= '1';
             wait until clk='1' and clk'event;
             writec <= '0';
-            wait_r := rg.get_integer(5, 10);
+            wait_r := rg.get_integer(1, 10);
             for i in  0 to wait_r loop
                 wait until clk='1' and clk'event;
             end loop;
@@ -593,7 +593,6 @@ begin
             k <= k0_loc;
             k1 <= k1_loc;
             wait until clk='1' and clk'event;
-            stop <= '0';
             wait_r := rg.get_integer(1, 10);
             for i in  0 to wait_r loop
                 wait until clk='1' and clk'event;
@@ -608,7 +607,7 @@ begin
                 n_iter := d_k / DES_NUMBER + 1 + PIPE_STAGES;
             end if;
             wait until clk='1' and clk'event;
-            wait until clk='1' and clk'event;
+            k <= k + DES_NUMBER;
             evaluate <= '1';
             for i in 1 to n_iter-1 loop
                 wait until clk='1' and clk'event;
@@ -643,7 +642,6 @@ library ieee;
 library WORK;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use ieee.std_logic_unsigned.all;
 use ieee.math_real.all;
 use WORK.des_pkg.all;
 use work.rnd_pkg.all;
@@ -731,7 +729,6 @@ architecture tb of tb_des_cracker is
 	signal s0_axi_bvalid_ref:  std_ulogic;
 
     signal irq      : std_ulogic;
-    signal irq_ref  : std_ulogic;
     signal led      : std_ulogic_vector(3 downto 0);
 
     signal aclk     : std_ulogic;
@@ -744,11 +741,11 @@ architecture tb of tb_des_cracker is
     signal c        : std_ulogic_vector (63 downto 0);
     signal k0       : std_ulogic_vector (55 downto 0);
     signal k_ref    : std_ulogic_vector (55 downto 0);
+    signal k        : std_ulogic_vector (55 downto 0);
     signal k1_ref   : std_ulogic_vector (55 downto 0);
+    signal k1       : std_ulogic_vector (55 downto 0);
     signal found_ref: std_ulogic;
     signal evaluate : std_ulogic;
-
-    signal k_freeze : std_ulogic_vector(55 downto 0);
 
     constant TbPeriod   : time := 10 ns;
     signal TbClock      : std_logic := '0';
@@ -835,8 +832,7 @@ begin
                 dw := false;
             elsif (start='1') then
                 s0_axi_awaddr <= "000000010100";
-                s0_axi_wdata(31 downto 24) <= (others => '0');
-                s0_axi_wdata(23 downto 0)  <= k0(55 downto 32);
+                s0_axi_wdata  <= p(31 downto 0);
                 dw := false;
             end if;
 
@@ -919,7 +915,6 @@ begin
         variable rd: integer;
         variable jp: boolean;
         variable br: integer;
-        variable freeze : boolean;
     begin
         s0_axi_araddr <= (others => '0');
         s0_axi_arvalid <= '0';
@@ -928,15 +923,14 @@ begin
         s0_axi_rdata_ref <= (others => '-');
         s0_axi_rresp_ref <= axi_resp_okay;
         s0_axi_rvalid_ref <= '0';
-        freeze := false;
-        wait for 500 ns;
+
         loop
-            br := rg.get_integer(0, 10);
+            br := rg.get_integer(0, 100);
             for i in 0 to br loop
                 wait until aclk='1' and aclk'event;
             end loop;
             --read a random register
-            rd := rg.get_integer(0, 8);
+            rd := rg.get_integer(0, 10);
             s0_axi_arvalid <= '1';
             if (rd=1) then
                 s0_axi_araddr <= "000000000000";
@@ -991,51 +985,31 @@ begin
                 s0_axi_rdata_ref(31 downto 24) <= (others => '0');
                 s0_axi_rdata_ref(23 downto 0) <= k0(55 downto 32);
             elsif (rd=7) then
-                if (freeze=true) then
-                    s0_axi_rdata_ref(31 downto 0) <= k_freeze(31 downto 0);
-                else
-                    freeze := true;
-                    if (jp=false) then
-                        s0_axi_rdata_ref <= k_ref(31 downto 0) - 3;
-                        k_freeze <= k_ref - 3;
-                    else
-                        s0_axi_rdata_ref <= k_ref(31 downto 0);
-                        k_freeze <= k_ref;
-                    end if;
-                end if;
+                s0_axi_rdata_ref <= k(31 downto 0);
             elsif (rd=8) then
-                if (freeze=true) then
-                    s0_axi_rdata_ref(31 downto 24) <= (others => '0');
-                    s0_axi_rdata_ref(23 downto 0) <= k_freeze(55 downto 32);
-                else
-                    s0_axi_rdata_ref(31 downto 24) <= (others => '0');
-                    s0_axi_rdata_ref(23 downto 0) <= k_ref(55 downto 32);
-                end if;
-                freeze := false;
+                s0_axi_rdata_ref(31 downto 24) <= (others => '0');
+                s0_axi_rdata_ref(23 downto 0) <= k(55 downto 32);
             elsif (rd=9) then
-                s0_axi_rdata_ref <= k1_ref(31 downto 0);
+                s0_axi_rdata_ref <= k1(31 downto 0);
             elsif (rd=10) then
                 s0_axi_rdata_ref(31 downto 24) <= (others => '0');
-                s0_axi_rdata_ref(23 downto 0) <= k1_ref(55 downto 32);
+                s0_axi_rdata_ref(23 downto 0) <= k1(55 downto 32);
             end if;
+
 
             wait until aclk='1' and aclk'event;
 
-            s0_axi_arvalid <= '0';
-            s0_axi_rready <= '1';
-            s0_axi_arready_ref <= '0';
-            s0_axi_rvalid_ref <= '0';
             s0_axi_rdata_ref <= (others => '-');
 
+            if (jp=false) then
+                s0_axi_arready_ref <= '0';
+                s0_axi_rvalid_ref <= '1';
+                s0_axi_rready <= '1';
+                wait until aclk='1' and aclk'event;
+            end if;
         end loop;
     end process;
 
-    process(aclk)
-    begin
-        if (aclk='1' and clk'event) then
-            irq_ref <= found_ref;
-        end if;
-    end process;
 
 	-- Check unknowns
 	process
@@ -1072,7 +1046,6 @@ begin
 			check_ref(v => s0_axi_rdata, r => s0_axi_rdata_ref, s => "s0_axi_rdata");
 			check_ref(v => s0_axi_rresp, r => s0_axi_rresp_ref, s => "s0_axi_rresp");
 			check_ref(v => s0_axi_rvalid, r => s0_axi_rvalid_ref, s => "s0_axi_rvalid");
-            check_ref(v => irq, v => irq_ref, s => "irq");
 		end loop;
 	end process;
 
@@ -1161,22 +1134,22 @@ begin
         writeline(output, l);
         finish;
     end if;
-    --if (found_ref /= found and found_ref = '1') then
-        --write(l, string'("NON REGRESSION TEST FAILED - "));
-        --write(l, now);
-        --writeline(output, l);
-        --write(l, string'("  found SHOULD HAVE BEEN ASSERTED"));
-        --writeline(output, l);
-        --finish;
-    --end if;
-    --if (found_ref /= found and found = '1') then
-        --write(l, string'("NON REGRESSION TEST FAILED - "));
-        --write(l, now);
-        --writeline(output, l);
-        --write(l, string'("  found SHOULD HAVE NOT BEEN ASSERTED"));
-        --writeline(output, l);
-        --finish;
-    --end if;
+    if (found_ref /= found and found_ref = '1') then
+    	write(l, string'("NON REGRESSION TEST FAILED - "));
+    	write(l, now);
+    	writeline(output, l);
+    	write(l, string'("  found SHOULD HAVE BEEN ASSERTED"));
+    	writeline(output, l);
+    	finish;
+    end if;
+    if (found_ref /= found and found = '1') then
+    	write(l, string'("NON REGRESSION TEST FAILED - "));
+    	write(l, now);
+    	writeline(output, l);
+    	write(l, string'("  found SHOULD HAVE NOT BEEN ASSERTED"));
+    	writeline(output, l);
+        finish;
+    end if;
     --if (evaluate='1') then
         --if not (k_ref = k) then
             --write(l, string'("NON REGRESSION TEST FAILED - "));

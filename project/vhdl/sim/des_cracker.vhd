@@ -61,6 +61,7 @@ architecture rtl of des_cracker is
     signal k_s      : std_ulogic_vector(55 downto 0);
     signal k1_s     : std_ulogic_vector(55 downto 0);   --0x020
     signal k_read   : std_ulogic;
+    signal k_freeze : std_ulogic_vector(55 downto 0);
     signal found_s  : std_ulogic;
 
     --state machine signals
@@ -97,10 +98,13 @@ begin
                 k1_s    <= (others => '0');
                 k_s     <= (others => '0');
                 found_s <= '0';
+                irq     <= '0';
             else
                 k1_s    <= k1;
                 if (k_read='0') then
                     k_s <= k;
+                else
+                    k_s <= k_freeze;
                 end if;
                 irq     <= found;
             end if;
@@ -163,8 +167,8 @@ begin
                 s0_axi_rresp <= OKAY;
                 s0_axi_rdata <= (others=>'0');
                 k_read       <= '0';
+                k_freeze     <= (others => '0');
             else
-                k_read <= '0';
                 if (n_state_r=ACK_R) then
                     if (s0_axi_araddr(11 downto 2)="0000000000") then
                         s0_axi_rresp <= OKAY;
@@ -189,7 +193,9 @@ begin
                         s0_axi_rresp <= OKAY;
                         s0_axi_rdata <= k_s(31 downto 0);
                         k_read       <= '1';    --to stop the update of k during reading
+                        k_freeze     <= k_s;
                     elsif (s0_axi_araddr(11 downto 2)="0000000111") then
+                        k_read       <= '0';
                         s0_axi_rresp <= OKAY;
                         s0_axi_rdata(31 downto 24) <= (others => '0');
                         s0_axi_rdata(23 downto 0) <= k_s(55 downto 32);
