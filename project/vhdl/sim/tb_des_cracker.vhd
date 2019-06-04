@@ -611,7 +611,6 @@ begin
             end if;
             wait until clk='1' and clk'event;
             wait until clk='1' and clk'event;
-            k1 <= k1_loc;
             evaluate <= '1';
             freewrite <= '1';
             for i in 1 to n_iter-1 loop
@@ -625,6 +624,7 @@ begin
                 found <= '1';
                 notfound <= '0';
             end if;
+            k1 <= k1_loc;
             wait until clk='1' and clk'event;
             stop <= '0';
             evaluate <= '0';
@@ -1196,7 +1196,7 @@ begin
         aresetn <= '1';
         wait until aclk='1' and aclk'event;
 
-        wait for 200 us;
+        wait for 2 ms;
         -- Stop the clock and hence terminate the simulation
         TbSimEnded <= '1';
 		write(l, string'("NON REGRESSION TEST PASSED - "));
