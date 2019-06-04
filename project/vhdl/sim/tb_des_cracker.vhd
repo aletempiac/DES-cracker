@@ -489,7 +489,9 @@ entity des_ref is
             k           : out std_ulogic_vector(55 downto 0);   -- last tried key
             k1          : out std_ulogic_vector(55 downto 0);   --found key
             found       : out std_ulogic;
-            evaluate    : out std_ulogic
+            evaluate    : out std_ulogic;
+            freewrite   : out std_ulogic;
+            notfound    : out std_ulogic
     );
 end entity des_ref;
 
@@ -544,6 +546,8 @@ begin
         k1 <= (others => '0');
         found <= '0';
         evaluate <= '0';
+        freewrite <= '0';
+        notfound <= '0';
         wait until sresetn='1' and clk='1' and clk'event;
         loop
             evaluate <= '0';
@@ -551,7 +555,6 @@ begin
             c <= (others => '0');
             k0 <= (others => '0');
             k <= (others => '0');
-            k1 <= (others => '0');
             found <= '0';
             --generate new plaintext
             p_loc := rg.get_std_ulogic_vector(64);
@@ -591,7 +594,6 @@ begin
             k0 <= k0_loc;
             stop <= '1';
             k <= k0_loc;
-            k1 <= k1_loc;
             wait until clk='1' and clk'event;
             stop <= '0';
             wait_r := rg.get_integer(1, 10);
@@ -609,21 +611,27 @@ begin
             end if;
             wait until clk='1' and clk'event;
             wait until clk='1' and clk'event;
+            k1 <= k1_loc;
             evaluate <= '1';
+            freewrite <= '1';
             for i in 1 to n_iter-1 loop
                 wait until clk='1' and clk'event;
                 k <= k + DES_NUMBER;
             end loop;
             if (stop_b=true) then
                 stop <= '1';
+                notfound <= '1';
             else
                 found <= '1';
+                notfound <= '0';
             end if;
             wait until clk='1' and clk'event;
             stop <= '0';
             evaluate <= '0';
             found <= '0';
-            for i in 0 to start_d-2 loop
+            freewrite <= '0';
+            start_d := rg.get_integer(100, 200);
+            for i in 0 to start_d loop
                 wait until clk='1' and clk'event;
             end loop;
         end loop;
@@ -668,7 +676,9 @@ architecture tb of tb_des_cracker is
                 k           : out std_ulogic_vector(55 downto 0);   -- last tried key
                 k1          : out std_ulogic_vector(55 downto 0);   --found key
                 found       : out std_ulogic;
-                evaluate    : out std_ulogic
+                evaluate    : out std_ulogic;
+                freewrite   : out std_ulogic;
+                notfound    : out std_ulogic
         );
     end component des_ref;
 
@@ -748,6 +758,8 @@ architecture tb of tb_des_cracker is
     signal k1_ref   : std_ulogic_vector (55 downto 0);
     signal found_ref: std_ulogic;
     signal evaluate : std_ulogic;
+    signal freewrite: std_logic;
+    signal notfound : std_logic;
 
     signal k_freeze : std_ulogic_vector(55 downto 0);
 
@@ -771,7 +783,9 @@ begin
               k         => k_ref,
               k1        => k1_ref,
               found     => found_ref,
-              evaluate  => evaluate);
+              evaluate  => evaluate,
+              freewrite => freewrite,
+              notfound  => notfound);
 
 
 	dut: des_cracker
@@ -805,7 +819,20 @@ begin
         variable dw: boolean;
         variable pc: boolean;
         variable br: boolean;
+        variable wt: integer;
     begin
+            s0_axi_awaddr <= "000000000000";
+            s0_axi_wdata  <= (others => '0');
+            s0_axi_awvalid  <= '0';
+            s0_axi_wvalid   <= '0';
+            s0_axi_awready_ref <= '0';
+            s0_axi_wready_ref <= '0';
+            s0_axi_bvalid_ref <= '0';
+            s0_axi_bready <= '0';
+            s0_axi_bresp_ref <= "--";
+            s0_axi_wstrb <= "1111";
+
+            wait until aresetn='1' and aresetn'event;
         loop
             s0_axi_awaddr <= "000000000000";
             s0_axi_wdata  <= (others => '0');
@@ -815,31 +842,52 @@ begin
             s0_axi_wready_ref <= '0';
             s0_axi_bvalid_ref <= '0';
             s0_axi_bready <= '0';
-            s0_axi_bresp_ref <= axi_resp_okay;
+            s0_axi_bresp_ref <= "--";
             s0_axi_wstrb <= "1111";
 
-            wait until start='1' or stop='1' or writep='1' or writec='1';
-            --when a trigger event signal do a write request
-            if (writep='1') then
-                s0_axi_awaddr <= "000000000000";
-                s0_axi_wdata  <= p(31 downto 0);
-                pc := true;
-                dw := true;
-            elsif (writec='1') then
-                s0_axi_awaddr <= "000000001000";
-                s0_axi_wdata  <= c(31 downto 0);
-                pc := false;
-                dw := true;
-            elsif (stop='1') then
-                s0_axi_awaddr <= "000000010000";
-                s0_axi_wdata  <= k0(31 downto 0);
-                dw := false;
-            elsif (start='1') then
-                s0_axi_awaddr <= "000000010100";
-                s0_axi_wdata(31 downto 24) <= (others => '0');
-                s0_axi_wdata(23 downto 0)  <= k0(55 downto 32);
+
+            if (freewrite='0') then
+                wait until start='1' or stop='1' or writep='1' or writec='1' or freewrite='1';
+                --when a trigger event signal do a write request
+                if (freewrite='1') then
+                    wt := rg.get_integer(20, 40);
+                    for i in 0 to wt loop
+                        wait until aclk='1' and aclk'event;
+                    end loop;
+                    s0_axi_awaddr <= std_ulogic_vector(to_unsigned(rg.get_integer(24, 2**12-1), 12));
+                    s0_axi_wdata <= rg.get_std_ulogic_vector(32);
+                    dw := false;
+                elsif (writep='1') then
+                    s0_axi_awaddr <= "000000000000";
+                    s0_axi_wdata  <= p(31 downto 0);
+                    pc := true;
+                    dw := true;
+                elsif (writec='1') then
+                    s0_axi_awaddr <= "000000001000";
+                    s0_axi_wdata  <= c(31 downto 0);
+                    pc := false;
+                    dw := true;
+                elsif (stop='1') then
+                    s0_axi_awaddr <= "000000010000";
+                    s0_axi_wdata  <= k0(31 downto 0);
+                    dw := false;
+                elsif (start='1') then
+                    s0_axi_awaddr <= "000000010100";
+                    s0_axi_wdata(31 downto 24) <= (others => '0');
+                    s0_axi_wdata(23 downto 0)  <= k0(55 downto 32);
+                    dw := false;
+                end if;
+            else
+                wt := rg.get_integer(20, 40);
+                for i in 0 to wt loop
+                    wait until aclk='1' and aclk'event;
+                end loop;
+                s0_axi_awaddr <= std_ulogic_vector(to_unsigned(rg.get_integer(24, 2**12-1), 12));
+                s0_axi_wdata <= rg.get_std_ulogic_vector(32);
                 dw := false;
             end if;
+
+            s0_axi_awaddr(1 downto 0) <= rg.get_std_ulogic_vector(2);
 
             s0_axi_awvalid  <= '1';
             s0_axi_wvalid   <= '1';
@@ -855,7 +903,14 @@ begin
             s0_axi_awready_ref <= '1';
             s0_axi_wready_ref <= '1';
             s0_axi_bvalid_ref <= '1';
-            s0_axi_bresp_ref <= axi_resp_okay;
+            if (s0_axi_awaddr<24) then
+                s0_axi_bresp_ref <= axi_resp_okay;
+            elsif (s0_axi_awaddr<40) then
+                s0_axi_bresp_ref <= axi_resp_slverr;
+            else
+                s0_axi_bresp_ref <= axi_resp_decerr;
+            end if;
+
 
             wait until aclk='1' and aclk'event;
 
@@ -927,42 +982,57 @@ begin
         s0_axi_rready <= '0';
         s0_axi_arready_ref <= '0';
         s0_axi_rdata_ref <= (others => '-');
-        s0_axi_rresp_ref <= axi_resp_okay;
+        s0_axi_rresp_ref <= "--";
         s0_axi_rvalid_ref <= '0';
         freeze := false;
         k_freeze <= (others => '0');
         wait for 500 ns;
         loop
-            br := rg.get_integer(0, 10);
+            br := rg.get_integer(0, 50);
             for i in 0 to br loop
                 wait until aclk='1' and aclk'event;
             end loop;
             --read a random register
-            rd := rg.get_integer(0, 9);
-            s0_axi_arvalid <= '1';
-            if (rd=1) then
-                s0_axi_araddr <= "000000000000";
-            elsif (rd=2) then
-                s0_axi_araddr <= "000000000100";
-            elsif (rd=3) then
-                s0_axi_araddr <= "000000001000";
-            elsif (rd=4) then
-                s0_axi_araddr <= "000000001100";
-            elsif (rd=5) then
-                s0_axi_araddr <= "000000010000";
-            elsif (rd=6) then
-                s0_axi_araddr <= "000000010100";
-            elsif (rd=7) then
-                s0_axi_araddr <= "000000011000";
-            elsif (rd=8) then
-                s0_axi_araddr <= "000000011100";
-            elsif (rd=9) then
-                s0_axi_araddr <= rg.get_std_ulogic_vector(12);
-            --elsif (rd=9) then
-                --s0_axi_araddr <= "000000100000";
-            --elsif (rd=10) then
-                --s0_axi_araddr <= "000000100100";
+            if (freewrite='1') then
+                rd := rg.get_integer(0, 9);
+                s0_axi_arvalid <= '1';
+                if (rd=1) then
+                    s0_axi_araddr <= "000000000000";
+                elsif (rd=2) then
+                    s0_axi_araddr <= "000000000100";
+                elsif (rd=3) then
+                    s0_axi_araddr <= "000000001000";
+                elsif (rd=4) then
+                    s0_axi_araddr <= "000000001100";
+                elsif (rd=5) then
+                    s0_axi_araddr <= "000000010000";
+                elsif (rd=6) then
+                    s0_axi_araddr <= "000000010100";
+                elsif (rd=7) then
+                    s0_axi_araddr <= "000000011000";
+                elsif (rd=8) then
+                    s0_axi_araddr <= "000000011100";
+                elsif (rd=9) then
+                    s0_axi_araddr <= std_ulogic_vector(to_unsigned(rg.get_integer(40, 2**12-1), 12));
+                end if;
+            else
+                s0_axi_arvalid <= '1';
+                if (notfound='0') then
+                    rd := rg.get_integer(9, 12);
+                    if (rd=10) then
+                        s0_axi_araddr <= "000000100000";
+                    elsif (rd=11) then
+                        s0_axi_araddr <= "000000100100";
+                    elsif (rd=12) then
+                        s0_axi_araddr <= std_ulogic_vector(to_unsigned(rg.get_integer(40, 2**12-1), 12));
+                    end if;
+                else
+                    rd := 12;
+                    s0_axi_araddr <= std_ulogic_vector(to_unsigned(rg.get_integer(40, 2**12-1), 12));
+                end if;
             end if;
+
+            s0_axi_araddr(1 downto 0) <= rg.get_std_ulogic_vector(2);
 
             wait until aclk='1' and aclk'event;
 
@@ -971,9 +1041,6 @@ begin
                 s0_axi_rready <= '1';
                 s0_axi_arready_ref <= '1';
                 s0_axi_rvalid_ref <= '1';
-                if (s0_axi_araddr>=X"18" and s0_axi_araddr<X"27") then
-
-                end if;
             else
                 s0_axi_rready <= '0';
                 s0_axi_arready_ref <= '1';
@@ -986,17 +1053,23 @@ begin
 
             if (rd=1) then
                 s0_axi_rdata_ref <= p(31 downto 0);
+                s0_axi_rresp_ref <= axi_resp_okay;
             elsif (rd=2) then
                 s0_axi_rdata_ref <= p(63 downto 32);
+                s0_axi_rresp_ref <= axi_resp_okay;
             elsif (rd=3) then
                 s0_axi_rdata_ref <= c(31 downto 0);
+                s0_axi_rresp_ref <= axi_resp_okay;
             elsif (rd=4) then
                 s0_axi_rdata_ref <= c(63 downto 32);
+                s0_axi_rresp_ref <= axi_resp_okay;
             elsif (rd=5) then
                 s0_axi_rdata_ref <= k0(31 downto 0);
+                s0_axi_rresp_ref <= axi_resp_okay;
             elsif (rd=6) then
                 s0_axi_rdata_ref(31 downto 24) <= (others => '0');
                 s0_axi_rdata_ref(23 downto 0) <= k0(55 downto 32);
+                s0_axi_rresp_ref <= axi_resp_okay;
             elsif (rd=7) then
                 if (freeze=true) then
                     s0_axi_rdata_ref(31 downto 0) <= k_freeze(31 downto 0);
@@ -1010,6 +1083,7 @@ begin
                         k_freeze <= k_ref;
                     end if;
                 end if;
+                s0_axi_rresp_ref <= axi_resp_okay;
             elsif (rd=8) then
                 if (freeze=true) then
                     s0_axi_rdata_ref(31 downto 24) <= (others => '0');
@@ -1018,12 +1092,21 @@ begin
                     s0_axi_rdata_ref(31 downto 24) <= (others => '0');
                     s0_axi_rdata_ref(23 downto 0) <= k_ref(55 downto 32);
                 end if;
+                s0_axi_rresp_ref <= axi_resp_okay;
                 freeze := false;
             elsif (rd=9) then
-                s0_axi_rdata_ref <= k1_ref(31 downto 0);
+                s0_axi_rdata_ref <= (others => '0');
+                s0_axi_rresp_ref <= axi_resp_decerr;
             elsif (rd=10) then
+                s0_axi_rdata_ref <= k1_ref(31 downto 0);
+                s0_axi_rresp_ref <= axi_resp_okay;
+            elsif (rd=11) then
                 s0_axi_rdata_ref(31 downto 24) <= (others => '0');
                 s0_axi_rdata_ref(23 downto 0) <= k1_ref(55 downto 32);
+                s0_axi_rresp_ref <= axi_resp_okay;
+            elsif (rd=12) then
+                s0_axi_rdata_ref <= (others => '0');
+                s0_axi_rresp_ref <= axi_resp_decerr;
             end if;
 
             wait until aclk='1' and aclk'event;
@@ -1033,6 +1116,7 @@ begin
             s0_axi_arready_ref <= '0';
             s0_axi_rvalid_ref <= '0';
             s0_axi_rdata_ref <= (others => '-');
+            s0_axi_rresp_ref <= "--";
 
         end loop;
     end process;
@@ -1119,103 +1203,6 @@ begin
 		write(l, now);
 		writeline(output, l);
         finish;
-    end process;
-
-    process
-        variable l : line;
-    begin
-    wait for 100 ns;
-    wait until aclk='1' and aclk'event;
-    if (s0_axi_awready /= s0_axi_awready_ref and s0_axi_awready='0') then
-        write(l, string'("NON REGRESSION TEST FAILED - "));
-        write(l, now);
-        writeline(output, l);
-        write(l, string'("  s0_axi_awready SHOULD HAVE BEEN ASSERTED"));
-        writeline(output, l);
-        finish;
-    end if;
-    if (s0_axi_wready /= s0_axi_wready_ref and s0_axi_wready='0') then
-        write(l, string'("NON REGRESSION TEST FAILED - "));
-        write(l, now);
-        writeline(output, l);
-        write(l, string'("  s0_axi_wready SHOULD HAVE BEEN ASSERTED"));
-        writeline(output, l);
-        finish;
-    end if;
-    if (s0_axi_bvalid /= s0_axi_bvalid_ref and s0_axi_bvalid='0') then
-        write(l, string'("NON REGRESSION TEST FAILED - "));
-        write(l, now);
-        writeline(output, l);
-        write(l, string'("  s0_axi_bvalid SHOULD HAVE BEEN ASSERTED"));
-        writeline(output, l);
-        finish;
-    end if;
-    if (s0_axi_awready /= s0_axi_awready_ref and s0_axi_awready='1') then
-        write(l, string'("NON REGRESSION TEST FAILED - "));
-        write(l, now);
-        writeline(output, l);
-        write(l, string'("  s0_axi_awready SHOULD NOT HAVE BEEN ASSERTED"));
-        writeline(output, l);
-        finish;
-    end if;
-    if (s0_axi_wready /= s0_axi_wready_ref and s0_axi_wready='1') then
-        write(l, string'("NON REGRESSION TEST FAILED - "));
-        write(l, now);
-        writeline(output, l);
-        write(l, string'("  s0_axi_wready SHOULD NOT HAVE BEEN ASSERTED"));
-        writeline(output, l);
-        finish;
-    end if;
-    if (s0_axi_bvalid /= s0_axi_bvalid_ref and s0_axi_bvalid='1') then
-        write(l, string'("NON REGRESSION TEST FAILED - "));
-        write(l, now);
-        writeline(output, l);
-        write(l, string'("  s0_axi_bvalid SHOULD NOT HAVE BEEN ASSERTED"));
-        writeline(output, l);
-        finish;
-    end if;
-    if (s0_axi_bresp /= s0_axi_bresp_ref) then
-        write(l, string'("NON REGRESSION TEST FAILED - "));
-        write(l, now);
-        writeline(output, l);
-        write(l, string'("  s0_axi_bresp WRONG"));
-        writeline(output, l);
-        finish;
-    end if;
-    --if (found_ref /= found and found_ref = '1') then
-        --write(l, string'("NON REGRESSION TEST FAILED - "));
-        --write(l, now);
-        --writeline(output, l);
-        --write(l, string'("  found SHOULD HAVE BEEN ASSERTED"));
-        --writeline(output, l);
-        --finish;
-    --end if;
-    --if (found_ref /= found and found = '1') then
-        --write(l, string'("NON REGRESSION TEST FAILED - "));
-        --write(l, now);
-        --writeline(output, l);
-        --write(l, string'("  found SHOULD HAVE NOT BEEN ASSERTED"));
-        --writeline(output, l);
-        --finish;
-    --end if;
-    --if (evaluate='1') then
-        --if not (k_ref = k) then
-            --write(l, string'("NON REGRESSION TEST FAILED - "));
-            --write(l, now);
-            --writeline(output, l);
-            --write(l, string'("  k SHOULD HAVE BEEN UPDATED"));
-            --writeline(output, l);
-            --finish;
-        --end if;
-        --if (k1_ref /= k1 and found = '1') then
-            --write(l, string'("NON REGRESSION TEST FAILED - "));
-            --write(l, now);
-            --writeline(output, l);
-            --write(l, string'("  WRONG KEY FOUND"));
-            --writeline(output, l);
-            --finish;
-        --end if;
-    --end if;
     end process;
 
 end tb;
