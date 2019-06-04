@@ -13,6 +13,7 @@ entity des_ctrl is
     port(   clk         : in std_ulogic;
             sresetn     : in std_ulogic;
             start       : in std_ulogic;
+            stop        : in std_ulogic;
             p           : in std_ulogic_vector(63 downto 0);
             c           : in std_ulogic_vector(63 downto 0);
             k0          : in std_ulogic_vector(55 downto 0);    -- starting key
@@ -141,7 +142,7 @@ begin
         end if;
     end process;
 
-    p_comb: process(c_state, start, end_count, found_local)
+    p_comb: process(c_state, start, stop, end_count, found_local)
     begin
         n_state     <= c_state;
         inc_count   <= '0';
@@ -150,21 +151,16 @@ begin
 
         case c_state is
             when IDLE =>
-                if (start = '1') then
-                    --n_state <= LOAD_KEY;
+                if (stop='1') then
+                    n_state <= IDLE;
+                elsif (start = '1') then
                     n_state <= WAIT_PIPE;
                 end if;
 
-            --when LOAD_KEY =>
-
-               -- n_state <= WAIT_PIPE;
-
-                --key_inc <= '0';
-                --inc_count <= '1';
-
-
             when WAIT_PIPE =>
-                if (end_count = '1') then
+                if (stop='1') then
+                    n_state <= IDLE;
+                elsif (end_count = '1') then
                     n_state <= COMPARE;
                 end if;
 
@@ -172,8 +168,12 @@ begin
                 inc_count <= '1';
 
             when COMPARE =>
-                if (found_local = '1') then
+                if (stop='1') then
+                    n_state <= IDLE;
+                elsif (found_local = '1') then
                     n_state <= FND;
+                elsif (start = '1') then
+                    n_state <= WAIT_PIPE;
                 end if;
 
                 key_inc <= '1';
