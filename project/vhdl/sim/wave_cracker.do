@@ -44,7 +44,7 @@ add wave -noupdate -radix hexadecimal /tb_des_cracker/k1_ref
 add wave -noupdate /tb_des_cracker/found_ref
 add wave -noupdate /tb_des_cracker/evaluate
 TreeUpdate [SetDefaultTree]
-WaveRestoreCursors {{Cursor 1} {1055000 ps} 0}
+WaveRestoreCursors {{Cursor 1} {622436 ps} 0}
 quietly wave cursor active 1
 configure wave -namecolwidth 264
 configure wave -valuecolwidth 126
@@ -60,4 +60,4 @@ configure wave -griddelta 40
 configure wave -timeline 0
 configure wave -timelineunits ps
 update
-WaveRestoreZoom {0 ps} {4200 ns}
+WaveRestoreZoom {0 ps} {656250 ps}
