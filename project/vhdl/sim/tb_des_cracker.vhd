@@ -564,7 +564,7 @@ begin
             d_k := rg.get_integer(0, 10000);
             --generate probability of stopping
             stop_b := rg.get_boolean_p(0.2);
-            stop_i := rg.get_integer(1, d_k);
+            stop_i := rg.get_integer(3, d_k-2);
             --generate start delay
             start_d := rg.get_integer(40, 100);
             --calculate k
@@ -611,7 +611,6 @@ begin
             end if;
             wait until clk='1' and clk'event;
             wait until clk='1' and clk'event;
-            k1 <= k1_loc;
             evaluate <= '1';
             freewrite <= '1';
             for i in 1 to n_iter-1 loop
@@ -625,7 +624,9 @@ begin
                 found <= '1';
                 notfound <= '0';
             end if;
+            k1 <= k1_loc;
             wait until clk='1' and clk'event;
+	    k <= k + DES_NUMBER;
             stop <= '0';
             evaluate <= '0';
             found <= '0';
@@ -1196,7 +1197,7 @@ begin
         aresetn <= '1';
         wait until aclk='1' and aclk'event;
 
-        wait for 200 us;
+        wait for 2 ms;
         -- Stop the clock and hence terminate the simulation
         TbSimEnded <= '1';
 		write(l, string'("NON REGRESSION TEST PASSED - "));
