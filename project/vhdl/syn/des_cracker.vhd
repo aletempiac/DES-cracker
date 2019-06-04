@@ -108,7 +108,7 @@ begin
                 else
                     k_s <= k_freeze;
                 end if;
-                irq     <= found;
+                irq <= found;
             end if;
         end if;
     end process;
