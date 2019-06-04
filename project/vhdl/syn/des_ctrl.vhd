@@ -96,7 +96,8 @@ begin
             for i in 0 to DES_NUMBER-1 loop
                 if (found_array(i)='1') then
                     cd16_mux <= cd16_s(i);
-
+                else
+                    cd16_mux <= (others => '-');
                 end if;
             end loop;
         else
