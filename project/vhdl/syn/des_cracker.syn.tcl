@@ -12,15 +12,12 @@
 # EDIT THIS
 
 array set ios {
-  irq    { V12 LVCMOS33 }
   led[0] { M14 LVCMOS33 }
   led[1] { M15 LVCMOS33 }
   led[2] { G14 LVCMOS33 }
   led[3] { D18 LVCMOS33 }
 }
 set frequency_mhz 180
-#set start_us 20000
-#set warm_us 1000000
 
 # DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
 set board "digilentinc.com:zybo:part0:1.0"
@@ -54,8 +51,6 @@ puts "Part: $part"
 puts "Source directory: $src"
 puts "Design name: $design"
 puts "Frequency: $frequency_mhz MHz"
-#puts "Start delay: $start_us µs"
-#puts "Warm-up delay: $warm_us µs"
 puts "*********************************************"
 
 #############
@@ -88,22 +83,21 @@ set_property ip_repo_paths [list ./$design] [current_fileset]
 update_ip_catalog
 create_bd_design $design
 set ip [create_bd_cell -type ip -vlnv [get_ipdefs *www.telecom-paristech.fr:DS:$design:*] $design]
-#set_property -dict [list CONFIG.frequency_mhz $frequency_mhz] $ip
 set ps7 [create_bd_cell -type ip -vlnv [get_ipdefs *xilinx.com:ip:processing_system7:*] ps7]
 apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 -config {make_external "FIXED_IO, DDR" apply_board_preset "1" Master "Disable" Slave "Disable" } $ps7
-set_property -dict [list CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ {180.000000}] $ps7
+set_property -dict [list CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ $frequency_mhz] $ps7
 set_property -dict [list CONFIG.PCW_USE_FABRIC_INTERRUPT {1} CONFIG.PCW_IRQ_F2P_INTR {1}] [get_bd_cells ps7]
 set_property -dict [list CONFIG.PCW_USE_M_AXI_GP0 {1}] $ps7
 set_property -dict [list CONFIG.PCW_M_AXI_GP0_ENABLE_STATIC_REMAP {1}] $ps7
 
 # Interconnections
 # Primary IOs
-create_bd_port -dir O -type data irq
-connect_bd_net [get_bd_pins /$design/irq] [get_bd_pins ps7/IRQ_F2P]
+# create_bd_port -dir O -type data irq
 create_bd_port -dir O -type data -from 3 -to 0 led
 connect_bd_net [get_bd_pins /$design/led] [get_bd_ports led]
 # ps7 - ip
 apply_bd_automation -rule xilinx.com:bd_rule:axi4 -config {Master "/ps7/M_AXI_GP0" Clk "Auto" }  [get_bd_intf_pins /$ip/s0_axi]
+connect_bd_net [get_bd_pins /$design/irq] [get_bd_pins ps7/IRQ_F2P]
 
 # Addresses ranges
 set_property offset 0x40000000 [get_bd_addr_segs -of_object [get_bd_intf_pins /ps7/M_AXI_GP0]]
@@ -126,15 +120,13 @@ foreach io [ array names ios ] {
 
 # Clocks and timing
 set clock [get_clocks]
-set_false_path -from $clock -to [get_ports irq]
 set_false_path -from $clock -to [get_ports led[*]]
-#set_false_path -from [get_ports irq] -to $clock
 
 # Implementation
 opt_design
 place_design
 route_design
-write_bitstream $design
+write_bitstream -force $design
 write_sysdef -force -bitfile $design.bit -hwdef $design.hwdef $design.sysdef
 
 # Reports
@@ -153,8 +145,6 @@ puts "Part: $part"
 puts "Source directory: $src"
 puts "Design name: $design"
 puts "Frequency: $frequency_mhz MHz"
-#puts "Start delay: $start_us µs"
-#puts "Warm-up delay: $warm_us µs"
 puts "*********************************************"
 puts "  bitstream in $design.bit"
 puts "  resource utilization report in $design.utilization.rpt"
