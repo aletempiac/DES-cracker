@@ -18,7 +18,7 @@ array set ios {
   led[2] { G14 LVCMOS33 }
   led[3] { D18 LVCMOS33 }
 }
-set frequency_mhz 100
+set frequency_mhz 180
 #set start_us 20000
 #set warm_us 1000000
 
@@ -91,7 +91,7 @@ set ip [create_bd_cell -type ip -vlnv [get_ipdefs *www.telecom-paristech.fr:DS:$
 #set_property -dict [list CONFIG.frequency_mhz $frequency_mhz] $ip
 set ps7 [create_bd_cell -type ip -vlnv [get_ipdefs *xilinx.com:ip:processing_system7:*] ps7]
 apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 -config {make_external "FIXED_IO, DDR" apply_board_preset "1" Master "Disable" Slave "Disable" } $ps7
-set_property -dict [list CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ {200.000000}] $ps7
+set_property -dict [list CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ {180.000000}] $ps7
 set_property -dict [list CONFIG.PCW_USE_FABRIC_INTERRUPT {1} CONFIG.PCW_IRQ_F2P_INTR {1}] [get_bd_cells ps7]
 set_property -dict [list CONFIG.PCW_USE_M_AXI_GP0 {1}] $ps7
 set_property -dict [list CONFIG.PCW_M_AXI_GP0_ENABLE_STATIC_REMAP {1}] $ps7
@@ -134,6 +134,7 @@ opt_design
 place_design
 route_design
 write_bitstream $design
+write_sysdef -force -bitfile $design.bit -hwdef $design.hwdef $design.sysdef
 
 # Reports
 report_utilization -file $design.utilization.rpt

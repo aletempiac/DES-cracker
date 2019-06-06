@@ -8,7 +8,7 @@ use IEEE.NUMERIC_STD.all;
 
 package des_pkg is
 
-    constant DES_NUMBER     : integer := 11;
+    constant DES_NUMBER     : integer := 12;
     constant PIPE_STAGES    : natural := 17;
 
     --subtypes for redefinition of vectors
