@@ -113,6 +113,7 @@ set_property range 4K [get_bd_addr_segs -of_object [get_bd_intf_pins /ps7/M_AXI_
 validate_bd_design
 save_bd_design
 generate_target all [get_files $design.bd]
+write_hwdef -file $design.hwdef
 synth_design -top $design
 
 # IOs
