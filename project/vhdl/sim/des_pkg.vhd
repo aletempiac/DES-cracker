@@ -9,7 +9,7 @@ use IEEE.NUMERIC_STD.all;
 package des_pkg is
 
     constant DES_NUMBER     : integer := 3;
-    constant PIPE_STAGES    : natural := 17;
+    constant PIPE_STAGES    : natural := 18;
 
     --subtypes for redefinition of vectors
     subtype w28 is std_ulogic_vector(1 to 28);

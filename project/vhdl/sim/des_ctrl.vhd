@@ -74,11 +74,13 @@ architecture rtl of des_ctrl is
     signal end_count        : std_ulogic;
     signal found_local      : std_ulogic;
     signal found_array      : std_ulogic_vector(0 to DES_NUMBER-1);
+    signal found_array_s    : std_ulogic_vector(0 to DES_NUMBER-1);
     signal key_inc          : std_ulogic;
     signal p_out_array      : des_out_array;
     signal p_out_array_s    : des_out_array;
     signal cd16             : cd16_array;
     signal cd16_s           : cd16_array;
+    signal cd16_s2          : cd16_array;
     signal cd16_mux         : w56;
     signal k1_local         : w56;
 
@@ -89,14 +91,17 @@ begin
         reg_des_ciph_i: reg         generic map (64) port map(clk, sresetn, p_out_array(i), p_out_array_s(i));
         reg_des_cd16_i: reg         generic map (56) port map(clk, sresetn, cd16(i), cd16_s(i));
         comparator_i:   comparator  generic map (64) port map(c, p_out_array_s(i), found_array(i));
+        reg_des_cds_i:  reg         generic map (56) port map(clk, sresetn, cd16_s(i), cd16_s2(i));
     end generate;
 
-    p_mux: process(cd16_s, found_array)
+    reg_des_comp_i: reg generic map (DES_NUMBER) port map(clk, sresetn, found_array, found_array_s);
+
+    p_mux: process(cd16_s2, found_array_s)
     begin
         cd16_mux <= (others => '-');
         for i in 0 to DES_NUMBER-1 loop
-            if (found_array(i)='1') then
-                cd16_mux <= cd16_s(i);
+            if (found_array_s(i)='1') then
+                cd16_mux <= cd16_s2(i);
             end if;
         end loop;
     end process;
@@ -104,12 +109,12 @@ begin
     reg_k1: reg generic map (56) port map(clk, sresetn, cd16_mux, k1_local);
     k1 <= pc1_inv(k1_local);
 
-    p_found: process(found_array)
+    p_found: process(found_array_s)
         variable tmp : std_ulogic;
     begin
         tmp := '0';
         for i in 0 to DES_NUMBER-1 loop
-            tmp := tmp or found_array(i);
+            tmp := tmp or found_array_s(i);
         end loop;
         found_local <= tmp;
     end process;
