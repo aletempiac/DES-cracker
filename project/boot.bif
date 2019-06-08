@@ -1,0 +1,6 @@
+image:
+{
+  [bootloader]/packages/LabSoC/builds/zybo/ds/fsbl.elf
+  des_cracker.bit
+  /packages/LabSoC/builds/zybo/ds/u-boot.elf
+}
