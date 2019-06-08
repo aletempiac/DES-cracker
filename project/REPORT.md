@@ -1,3 +1,23 @@
+## Introduction
+
+## Source files
+
+In this section the list of all the source code files is reported with a brief description for each of them.
+
+* `des_pkg.vhd`: package file containing the definition of constants, new types and subtypes and all the functions used to implement the DES algorithm
+* `reg.vhd`: n-bits Flip-Flop with synchronous reset
+* `s_box.vhd`: component that implements a generic S box of the DES algorithm (it applies the S table to six bits and outputs the transformed 4 bits)
+* `cipher_f.vhd`: component that implements the Feistel f function of the DES algorithm
+* `f_wrapper.vhd`: wrapper for the *cipher_f* component that takes as inputs the generic $`L`$ and $`R`$ data and applies the f function and the following xor operation to produce the new $`R`$ for the next round
+* `key_round.vhd`: component that applies the left-shift and the $`PC_2`$ permutation to the generic $`C`$ and $`D`$ data for the key schedule
+* `key_gen.vhd`: block that implements all the key schedule algorithm instantiating a *key_round* component for each of the 16 rounds
+* `des.vhd`: block that implements all the DES algorithm taking as inputs the plaintext and the 64-bits key and producing as the ciphertext and the 56-bits permutated key
+* `des_wrap.vhd`: wrapper used to produce the input key for the *des* block adding an offset to the starting key depending on the DES number
+* `comparator.vhd`: n-bits comparator with single bit output used to compare the DES output with the ciphertext
+* `counter.vhd`: counter component used to wait for the latency due to the pipeline before starting the comparation
+* `des_ctrl.vhd`: complete DES engine containing both datapath and state machine for the control
+* `des_cracker.vhd`: top-level entity used as wrapper for the *des_ctrl* to implement and manage the AXI4 lite machinery
+
 ## Synthesis results
 
 In order to synthesize the DES cracker for the Zynq core of the Zybo board, we designed a Tcl synthesis script.

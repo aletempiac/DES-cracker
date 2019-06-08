@@ -51,7 +51,6 @@ architecture rtl of des_wrap is
 
 begin
 
-    -- index_unsigned <= to_unsigned(index, index_unsigned'length);
 	key_local <= std_ulogic_vector(to_unsigned(to_integer(unsigned(key)) + index, 56));
     key_64 <= key_local(1 to 7) & '0' & key_local(8 to 14) & '0' & key_local(15 to 21) & '0' & key_local(22 to 28) & '0' & key_local(29 to 35) & '0' & key_local(36 to 42) & '0' & key_local(43 to 49) & '0' & key_local(50 to 56) & '0';
 

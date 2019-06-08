@@ -1,6 +1,6 @@
 ------------------------------------------------------------
--- Author       :   Pietro Mambelli
--- File         :   dht11_ctrl_axi_wrapper.vhd
+-- Author       :   Pietro Mambelli & Alessandro Tempia Calvino
+-- File         :   reg.vhd
 ------------------------------------------------------------
 library IEEE;
 library WORK;
