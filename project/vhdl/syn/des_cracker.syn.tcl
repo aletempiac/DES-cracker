@@ -20,8 +20,8 @@ array set ios {
 set frequency_mhz 180
 
 # DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
-set board "digilentinc.com:zybo:part0:1.0"
-#set board [get_board_parts digilentinc.com:zybo*]
+#set board "digilentinc.com:zybo:part0:1.0"
+set board [get_board_parts digilentinc.com:zybo*]
 set part xc7z010clg400-1
 
 proc usage {} {
