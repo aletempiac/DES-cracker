@@ -65,7 +65,7 @@ architecture rtl of des_ctrl is
 
     -- signals
 
-    type state is (IDLE, WAIT_PIPE, COMPARE, FND);
+    type state is (IDLE, WAIT_PIPE, COMPARE, FND, RISE_FND);
     signal c_state, n_state     : state;
 
     type cd16_array is array (0 to DES_NUMBER-1) of w56;
@@ -80,6 +80,7 @@ architecture rtl of des_ctrl is
     signal cd16             : cd16_array;
     signal cd16_s           : cd16_array;
     signal cd16_mux         : w56;
+    signal k1_local         : w56;
 
 begin
 
@@ -92,20 +93,16 @@ begin
 
     p_mux: process(cd16_s, found_array)
     begin
-        if (found_local='1') then
-            for i in 0 to DES_NUMBER-1 loop
-                if (found_array(i)='1') then
-                    cd16_mux <= cd16_s(i);
-                else
-                    cd16_mux <= (others => '-');
-                end if;
-            end loop;
-        else
-           cd16_mux <= (others => '-');
-        end if;
+        cd16_mux <= (others => '-');
+        for i in 0 to DES_NUMBER-1 loop
+            if (found_array(i)='1') then
+                cd16_mux <= cd16_s(i);
+            end if;
+        end loop;
     end process;
 
-    k1 <= pc1_inv(cd16_mux);
+    reg_k1: reg generic map (56) port map(clk, sresetn, cd16_mux, k1_local);
+    k1 <= pc1_inv(k1_local);
 
     p_found: process(found_array)
         variable tmp : std_ulogic;
@@ -125,7 +122,7 @@ begin
             if (key_inc='0') then
                 key <= k0;
             else
-                key <= std_ulogic_vector(to_unsigned(to_integer(unsigned(key)) + DES_NUMBER, 56));
+                key <= key + DES_NUMBER;
             end if;
         end if;
     end process;
