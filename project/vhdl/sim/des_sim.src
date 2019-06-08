@@ -12,6 +12,7 @@ vcom -2008 -work myLib $src/a.des/comparator.vhd
 vcom -2008 -work myLib $src/counter.vhd
 vcom -2008 -work myLib $src/des_ctrl.vhd
 vcom -2008 -work myLib $src/des_cracker.vhd
-#vcom -2008 -work myLib $src/tb_des_ctrl.vhd
+vcom -2008 -work myLib $src/tb_des_ctrl.vhd
 vcom -2008 -work myLib $src/tb_des_cracker.vhd
+#vsim myLib.tb_des_ctrl
 vsim myLib.tb_des_cracker

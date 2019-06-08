@@ -52,10 +52,12 @@ begin
 
     gen_key_round: for i in 1 to 16 generate
         key_round_i: key_round port map(c_local_s(i-1), d_local_s(i-1), SHIFT_TABLE(i), c_local(i), d_local(i), key_out(i));
-        reg_c_i: reg generic map (28) port map (clk, sresetn, c_local(i), c_local_s(i));
-        reg_d_i: reg generic map (28) port map (clk, sresetn, d_local(i), d_local_s(i));
+        last_round: if (i/=16) generate
+            reg_c_i: reg generic map (28) port map (clk, sresetn, c_local(i), c_local_s(i));
+            reg_d_i: reg generic map (28) port map (clk, sresetn, d_local(i), d_local_s(i));
+        end generate;
     end generate;
 
-    cd16 <= c_local_s(16) & d_local_s(16);
+    cd16 <= c_local(16) & d_local(16);
 
 end rtl;
