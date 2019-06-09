@@ -69,7 +69,16 @@ The logic hidden inside the *KEY SELECTOR* block consists of:
 * an OR gate that takes DES_NUMBER signals, which are the outputs of all the comparators, and produces `found_local`. This signal is used from the control unit to point out that the secret key has been discovered;
 * a selector that, taking all the `cd16` signals and the set of outputs from the comparators, chooses the one coming to DES engines that found the secret key. Note that this logic unit has been coded in a behavioral way, in order to leave the implementation and the optimization to the synthesizer.
 
- 
+As already explained, the `cd16` selected is used to reconstruct the 56-bits secret key. A register is placed before the $`PC_1^-1`$ block to synchronize that data with the `found` signal produced by the state machine in the control unit. Furthermore, the `cd16` data coming from the last DES machine is used to retrieve the last tried key `k` (through another $`PC_1^-1`$ block).
+
+As shown in the schematic, four pipeline stages are placed among the datapath:
+* after the accumulator
+* after the key extensions
+* after the DES blocks
+* after the comparators
+This choice permits to decrease the critical path delay and increase the clock frequency.
+
+
 
 
 
