@@ -1,11 +1,31 @@
 # Hardware DES cracker - REPORT
 
-Authors:
+#### Authors: Pietro Mambelli, Alessandro Tempia Calvino
 
-    Pietro Mambelli
-    Alessandro Tempia Calvino
+#### Contents:
+
+* [Introduction](#introduction)
+* [Source files](#source-files)
+* [Datapath](#datapath)
+* [Control](#control)
+* [AXI4 lite machinery](#axi4-lite-machinery)
+* [Validation](#validation)
+* [Synthesis results](#synthesis-results)
 
 ## Introduction
+
+This project aims at designing and implementing a machine to crack the DES (Data Encryption Standard) encryption algorithm.
+
+Taking into account the contraints of the boards used (Zybo boards) in terms of timing and resource utilization, the idea behind this project is to instantiate as many DES encryption engines as possible and to distribute the computation effort among them.
+
+The cracking machine is given a plaintext $`P`$, a ciphertext $`C`$, 64 bits each, and a 56-bits starting secret key $`K_0`$. It then try to brute-force all the possible 56-bits keys $`K\ge K_0`$ until the result of the $`P`$ encryption equals $`C`$. When the match have been found the cracking machine stores the corresponding secret key $`K_1`$ in a register and raises an interrupt to inform the software stack that runs on the ARM CPU of the Zynq core.
+
+All the detailed specifications for this project can be found in the [README.md](./README.md) file.
+
+Our design involves dividing the solution space into smaller sets of keys. These subsets are addressed to different DES engines that, running in parallel, are in charge of brute-forcing the keys until one of them find the correct solution. Every DES instance is given a starting key computed as $`K_0`$ plus an offset that depends on the number of DES engines used and the current iteration.
+
+The machine designed is fully pipelined. In particular, the DES block (that processes the plaintext with different keys to produce the ciphertext) has been designed with 14 pipeline stages. Considering also the registers inserted in the overall datapath to split the combinatorial delay of the machine, we end up with a total of 18 pipeline stages.
+
 
 ## Source files
 
@@ -19,7 +39,7 @@ In this section the list of all the source code files is reported with a brief d
 * `key_round.vhd`: component that applies the left-shift and the $`PC_2`$ permutation to the generic $`C`$ and $`D`$ data for the key schedule
 * `key_gen.vhd`: block that implements all the key schedule algorithm instantiating a *key_round* component for each of the 16 rounds
 * `des.vhd`: block that implements all the DES algorithm taking as inputs the plaintext and the 64-bits key and producing as the ciphertext and the 56-bits permutated key
-* `des_wrap.vhd`: wrapper used to produce the input key for the *des* block adding an offset to the starting key depending on the DES number
+* `des_wrap.vhd`: wrapper used to produce the input key for the *des* block adding an offset to the starting key depending on the DES number and on the current iteration
 * `comparator.vhd`: n-bits comparator with single bit output used to compare the DES output with the ciphertext
 * `counter.vhd`: counter component used to wait for the latency due to the pipeline before starting the comparation
 * `des_ctrl.vhd`: complete DES engine containing both datapath and state machine for the control
@@ -27,9 +47,17 @@ In this section the list of all the source code files is reported with a brief d
 
 ## Datapath
 
+This section is dedicated to the explanation of the DES cracker's datapath. The block scheme is shown in the following picture.
+
+![](../doc/datapath.png)
+
+
+
 ## Control
 
 ## AXI4 lite machinery
+
+The cracking machine will communicate with the CPU using the same AXI4 lite interface
 
 ## Validation
 
