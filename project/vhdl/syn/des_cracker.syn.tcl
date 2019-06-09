@@ -17,7 +17,7 @@ array set ios {
   led[2] { G14 LVCMOS33 }
   led[3] { D18 LVCMOS33 }
 }
-set frequency_mhz 180
+set frequency_mhz 185
 
 # DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
 set board "digilentinc.com:zybo:part0:1.0"
