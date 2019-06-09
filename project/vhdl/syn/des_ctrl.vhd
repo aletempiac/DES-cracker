@@ -65,7 +65,7 @@ architecture rtl of des_ctrl is
 
     -- signals
 
-    type state is (IDLE, WAIT_PIPE, COMPARE, FND, RISE_FND);
+    type state is (IDLE, WAIT_PIPE, COMPARE, FND);
     signal c_state, n_state     : state;
 
     type cd16_array is array (0 to DES_NUMBER-1) of w56;
