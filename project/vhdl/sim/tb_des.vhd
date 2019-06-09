@@ -22,7 +22,8 @@ architecture rtl of tb_des is
                 sresetn : in std_ulogic;
                 p_in    : in w64;       --input plaintext
                 key     : in w64;       --key
-                p_out   : out w64       --output ciphereded plaintext
+                p_out   : out w64;      --output ciphered plaintext
+                cd16    : out w56       --cd16 represents the permutated key
             );
     end component des;
 
@@ -32,13 +33,14 @@ architecture rtl of tb_des is
     signal p_in     : w64;
     signal key      : w64;
     signal p_out    : w64;
+    signal cd16     : w56;
 
     -- Clock period definitions
    constant clk_period : time := 10 ns;
 
 begin
 
-    des_uut: des port map(clk, sresetn, p_in, key, p_out);
+    des_uut: des port map(clk, sresetn, p_in, key, p_out, cd16);
 
     -- Clock process definitions
     clk_gen : process
@@ -89,7 +91,9 @@ begin
 	output_proc : process
 		FILE 	expectedfile 	: text;
 		VARIABLE resultline 	: line;
-        VARIABLE readciphered     : w64;
+        VARIABLE readciphered   : w64;
+        VARIABLE space     	    : character;
+        VARIABLE readkey	    : w56;
 	begin
 
 		file_open(expectedfile, "expected.txt", read_mode);
@@ -102,9 +106,14 @@ begin
 			readline(expectedfile, resultline);
 
 			hread(resultline, readciphered);
+            read(resultline, space);		--read a space divider
+			hread(resultline, readkey);	    --read key
 
-			assert (p_out = readciphered) report "Wrong result! DES failure.. Result:" & to_hstring(p_out) &" Expected:" & to_hstring(readciphered);
-            wait for clk_period;
+            wait for clk_period/2;
+
+            assert (p_out = readciphered) report "Wrong Chipertext! DES failure.. Result:" & to_hstring(p_out) &" Expected:" & to_hstring(readciphered);
+            assert (cd16 = readkey) report "Wrong key reconstruction! DES failure.. Result:" & to_hstring(cd16) &" Expected:" & to_hstring(readkey);
+            wait until clk='1' and clk'event;
 		end loop;
 
 		file_close(expectedfile);
