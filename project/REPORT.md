@@ -32,7 +32,7 @@ The machine designed is fully pipelined. In particular, the DES block (that proc
 In this section the list of all the source code files is reported with a brief description for each of them.
 
 * `des_pkg.vhd`: package file containing the definition of constants, new types and subtypes and all the functions used to implement the DES algorithm
-* `reg.vhd`: n-bits Flip-Flop with synchronous reset
+* `reg.vhd`: n-bits register with synchronous reset
 * `s_box.vhd`: component that implements a generic S box of the DES algorithm (it applies the S table to six bits and outputs the transformed 4 bits)
 * `cipher_f.vhd`: component that implements the Feistel f function of the DES algorithm
 * `f_wrapper.vhd`: wrapper for the *cipher_f* component that takes as inputs the generic $`L`$ and $`R`$ data, applies the f function and the following xor operation to produce the new $`R`$ for the next round
@@ -49,7 +49,17 @@ In this section the list of all the source code files is reported with a brief d
 
 This section is dedicated to the explanation of the DES cracker's datapath. The block scheme is shown in the following picture.
 
-![](../doc/datapath.png)
+<img src="../doc/datapath.png" alt="Schematic" width="400" style="float: left; margin-right: 10px;" />
+
+Referring to the schematic, the input data are the plaintext `P`, the ciphertext `C` (each of them of 64 bits) and the 56-bits starting key `k0`. Starting from `k0`, the new keys must be processed to feed each DES engine at every iteration. First of all, an accumulator (composed by an adder and a register) generates a new key adding `DES_NUMBER` to `k0` at each clock cycle: a mux is placed before it in order to select `k0` as input at the first iteration.
+
+The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). Moreover, these 56-bits keys must be extended because the generic DES block takes as input a 64-bits key. Note that the bits added in the extension should be parity bits: since they are not used for the purpose of cracking the algorithm, they are set to 0.
+
+The DES engine has been designed according to the common scheme of the algorithm. Two pipeline registers are placed between the logic used at each round, except for the initial stage (after the IP permutation) and the final stage (before the FP permutation).
+
+
+
+
 
 
 
