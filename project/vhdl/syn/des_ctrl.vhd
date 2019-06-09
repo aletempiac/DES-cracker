@@ -31,7 +31,7 @@ architecture rtl of des_ctrl is
                 p_in    : in w64;       --input plaintext
                 key     : in w56;       --key
                 index   : natural range 0 to DES_NUMBER-1;
-                p_out   : out w64;      --output cyphered plaintext
+                p_out   : out w64;      --output ciphered plaintext
                 cd16    : out w56       --cd16 represents the permutated key
         );
     end component;
