@@ -80,8 +80,16 @@ As shown in the schematic, four pipeline stages are placed along the datapath:
 This choice permits to decrease the critical path delay and increase the clock frequency.
 
 ## Control
+This section explain how the the controller manage the machine. A Moore state machine has been realized and the state diagram is shown in the following figure.  
 <img src="../doc/state_machine.png" alt="state machine" width="500" style="float: left; margin-right: 10px;" />
 
+The machine is controlled with four states:
+* **IDLE**: this is the waiting state where the machine is idle and waits for the start signal to be raised.
+* **WAIT_PIPE**: this is the state where the machine begin to search the keys but the output doesn't still have the right value due to the pipeline latency. So a counter is set to count through the pipeline stages. The output of the `key selector` is ignored. When the counter reaches the pipe stages number the `end_count` signal is raised and the next state will be the `COMPARE` state.
+* **COMPARE**: From here the machine will generate and search the right key waiting for the `found_local` signal to be high.  
+* **FND**: this is the final state when the right key has been found. The found signal is raised for a clock cycle and the output contains the cracked key. Then the machine comes back to the `IDLE` state.
+
+Whenever a stop signal is raised, the machine returns to the `IDLE` state.
 
 ## AXI4 lite machinery
 
