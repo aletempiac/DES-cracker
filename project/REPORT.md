@@ -49,7 +49,7 @@ In this section the list of all the source code files is reported with a brief d
 
 This section is dedicated to the explanation of the DES cracker's datapath. The block scheme is shown in the following picture.
 
-<img src="../doc/datapath.png" alt="Schematic" width="400" style="float: left; margin-right: 10px;" />
+<img src="../doc/datapath.png" alt="Schematic" width="800" style="float: left; margin-right: 10px;" />
 
 Referring to the schematic, the input data are the plaintext `P`, the ciphertext `C` (each of them of 64 bits) and the 56-bits starting key `k0`. Starting from `k0`, the new keys must be processed to feed each DES engine at every iteration. First of all, an accumulator (composed by an adder and a register) generates a new key adding `DES_NUMBER` to `k0` at each clock cycle: a mux is placed before it in order to select `k0` as input at the first iteration.
 
