@@ -84,4 +84,3 @@ begin
     p_out <= fp(lr_16);
 
 end architecture rtl;
-
