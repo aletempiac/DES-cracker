@@ -80,6 +80,8 @@ As shown in the schematic, four pipeline stages are placed along the datapath:
 This choice permits to decrease the critical path delay and increase the clock frequency.
 
 ## Control
+<img src="../doc/state_machine.png" alt="state machine" width="500" style="float: left; margin-right: 10px;" />
+
 
 ## AXI4 lite machinery
 
