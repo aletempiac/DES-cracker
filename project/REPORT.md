@@ -63,15 +63,13 @@ The outputs of every DES engine are:
 
 The latter is extracted from the component used for the round-key generation and it is needed to reconstruct the final solution. In particular, `cd16` is the concatenation of the 32-bits data resulting from the last shift of the key schedule algorithm. Thanks to a proprety of this algorithm, `cd16` is the same 56-bits key generated after the $`PC_1`$ permutation of the 64-bits input key. For this reason, we can apply to it a special function (that could be considered as the inverse of $`PC_1`$, except it directly gets rid of the parity bits) to retrieve the last tried 56-bits key.
 
-Then, the output of each DES (referred in the schematic as *chifertext*) is sent to a comparator which checks for a match 
+Then, the output of each DES (referred in the schematic as *chifertext*) is sent to the corresponding comparator which checks for a match with the given encrypted message $`C`$. When one of the comparators detects a match it rises a signal that is synchronized and kept high for a clock cycle.
 
+The logic hidden inside the *KEY SELECTOR* block consists of:
+* an OR gate that takes DES_NUMBER signals, which are the outputs of all the comparators, and produces `found_local`. This signal is used from the control unit to point out that the secret key has been discovered;
+* a selector that, taking all the `cd16` signals and the set of outputs from the comparators, chooses the one coming to DES engines that found the secret key. Note that this logic unit has been coded in a behavioral way, in order to leave the implementation and the optimization to the synthesizer.
 
-
-
-
-
-
-
+ 
 
 
 
@@ -79,7 +77,7 @@ Then, the output of each DES (referred in the schematic as *chifertext*) is sent
 
 ## AXI4 lite machinery
 
-The cracking machine will communicate with the CPU using the same AXI4 lite interface
+The cracking machine communicates with the CPU using the AXI4 lite protocol.
 
 ## Validation
 
