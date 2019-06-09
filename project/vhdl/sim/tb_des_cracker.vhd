@@ -593,7 +593,7 @@ begin
             c_loc := p_out;
             k0 <= k0_loc;
             stop <= '1';
-            k <= k0_loc;
+            k <= (others => '-');
             wait until clk='1' and clk'event;
             stop <= '0';
             wait_r := rg.get_integer(1, 10);
@@ -615,7 +615,11 @@ begin
             freewrite <= '1';
             for i in 1 to n_iter-1 loop
                 wait until clk='1' and clk'event;
-                k <= k + DES_NUMBER;
+                if (i=PIPE_STAGES) then
+                    k <= k0_loc + DES_NUMBER-1;
+                elsif (i>PIPE_STAGES) then
+                    k <= k + DES_NUMBER;
+                end if;
             end loop;
             if (stop_b=true) then
                 stop <= '1';
@@ -626,7 +630,7 @@ begin
             end if;
             k1 <= k1_loc;
             wait until clk='1' and clk'event;
-	    k <= k + DES_NUMBER;
+	        k <= k + DES_NUMBER;
             stop <= '0';
             evaluate <= '0';
             found <= '0';

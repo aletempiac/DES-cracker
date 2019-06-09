@@ -474,7 +474,7 @@ begin
             p <= p_loc;
             c <= c_loc;
             k0 <= k0_loc;
-            k <= k0_loc;
+            k <= (others => '-');
             k1 <= k1_loc;
             wait until clk='1' and clk'event;
             --now start generating signals for comparison
@@ -485,11 +485,14 @@ begin
                 n_iter := d_k / DES_NUMBER + 1 + PIPE_STAGES;
             end if;
             wait until clk='1' and clk'event;
-            k <= k + DES_NUMBER;
             evaluate <= '1';
             for i in 1 to n_iter-1 loop
                 wait until clk='1' and clk'event;
-                k <= k + DES_NUMBER;
+                if (i=PIPE_STAGES-1) then
+                    k <= k0_loc + DES_NUMBER-1;
+                elsif (i>PIPE_STAGES-1) then
+                    k <= k + DES_NUMBER;
+                end if;
             end loop;
             if (stop_b=true) then
                 stop <= '1';
@@ -650,14 +653,16 @@ begin
         finish;
     end if;
     if (evaluate='1') then
-    	if not (k_ref = k) then
-    		write(l, string'("NON REGRESSION TEST FAILED - "));
-    		write(l, now);
-    		writeline(output, l);
-    		write(l, string'("  k SHOULD HAVE BEEN UPDATED"));
-    		writeline(output, l);
-    		finish;
-    	end if;
+        for i in k'length - 1 downto 0 loop
+    	    if not (k_ref(i) = k(i) or K_ref(i)='-') then
+    		    write(l, string'("NON REGRESSION TEST FAILED - "));
+    		    write(l, now);
+    		    writeline(output, l);
+    		    write(l, string'("  k SHOULD HAVE BEEN UPDATED"));
+    		    writeline(output, l);
+    		    finish;
+    	    end if;
+        end loop;
     	if (k1_ref /= k1 and found = '1') then
     		write(l, string'("NON REGRESSION TEST FAILED - "));
     		write(l, now);

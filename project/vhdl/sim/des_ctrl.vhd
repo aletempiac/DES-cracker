@@ -132,7 +132,7 @@ begin
         end if;
     end process;
 
-    k <= key;
+    k <= pc1_inv(cd16_s2(DES_NUMBER-1));
 
     p_states: process(clk)
     begin
