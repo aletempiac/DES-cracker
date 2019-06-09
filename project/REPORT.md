@@ -55,7 +55,7 @@ Referring to the schematic, the input data are the plaintext $`P`$, the cipherte
 
 The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). Moreover, these 56-bits keys must be extended because the generic DES block takes as input a 64-bits key. Note that the bits added in the extension should be parity bits: since they are not used for the purpose of cracking the algorithm, they are set to 0.
 
-The DES engine has been designed according to the common scheme of the algorithm. A pipeline stage is placed between the logic used at each round, except for the initial stage (after the IP permutation) and the final stage (before the $`FP`$ permutation).
+The DES engine has been designed according to the common scheme of the algorithm. A pipeline stage is placed between the logic used at each round, except for the initial stage (after the IP permutation) and the final stage (before the FP permutation).
 
 The outputs of every DES engine are:
 * the message ciphered with the last tried key
@@ -76,6 +76,7 @@ As shown in the schematic, four pipeline stages are placed among the datapath:
 * after the key extensions
 * after the DES blocks
 * after the comparators
+
 This choice permits to decrease the critical path delay and increase the clock frequency.
 
 
