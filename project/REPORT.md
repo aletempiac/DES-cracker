@@ -1,11 +1,8 @@
 # Hardware DES cracker - REPORT
 
-Authors:
+#### Authors: Pietro Mambelli, Alessandro Tempia Calvino
 
-    Pietro Mambelli
-    Alessandro Tempia Calvino
-
-Contents:
+#### Contents:
 
 * [Introduction](#introduction)
 * [Source files](#source-files)
@@ -50,11 +47,11 @@ In this section the list of all the source code files is reported with a brief d
 
 ## Datapath
 
-This section is dedicated to the explanation of the DES cracker's datapath.
-
-
+This section is dedicated to the explanation of the DES cracker's datapath. The block scheme is shown in the following picture.
 
 ![](../doc/datapath.png)
+
+
 
 ## Control
 
