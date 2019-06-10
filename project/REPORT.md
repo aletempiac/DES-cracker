@@ -6,6 +6,7 @@
 
 * [Introduction](#introduction)
 * [Source files](#source-files)
+* [DES package](#des-packege)
 * [Datapath](#datapath)
 * [Control](#control)
 * [AXI4 lite machinery](#axi4-lite-machinery)
@@ -22,10 +23,9 @@ The cracking machine is given a plaintext $`P`$, a ciphertext $`C`$, 64 bits eac
 
 All the detailed specifications for this project can be found in the [README.md](./README.md) file.
 
-Our design involves dividing the solution space into smaller sets of keys. These subsets are addressed to different DES engines that, running in parallel, are in charge of brute-forcing the keys until one of them find the correct solution. Every DES instance is given a starting key computed as $`K_0`$ plus an offset that depends on the number of DES engines used and the current iteration.
+Our design involves dividing the solution space into smaller sets of keys. These subsets are addressed to different DES engines that, running in parallel, are in charge of brute-forcing the keys until one of them finds the correct solution. Every DES instance is given a starting key computed as $`K_0`$ plus an offset that depends on the number of DES engines used and the current iteration.
 
 The machine designed is fully pipelined. In particular, the DES block (that processes the plaintext with different keys to produce the ciphertext) has been designed with 14 pipeline stages. Considering also the registers inserted in the overall datapath to split the combinatorial delay of the machine, we end up with a total of 18 pipeline stages.
-
 
 ## Source files
 
@@ -33,8 +33,8 @@ In this section the list of all the source code files is reported with a brief d
 
 * `des_pkg.vhd`: package file containing the definition of constants, new types and subtypes and all the functions used to implement the DES algorithm
 * `reg.vhd`: n-bits register with synchronous reset
-* `s_box.vhd`: component that implements a generic S box of the DES algorithm (it applies the S table to six bits and outputs the transformed 4 bits)
-* `cipher_f.vhd`: component that implements the Feistel f function of the DES algorithm
+* `s_box.vhd`: component that implements a generic S box of the DES algorithm (it applies the S table to 6 bits and outputs the transformed 4 bits)
+* `cipher_f.vhd`: component that implements the Feistel $`f`$ function of the DES algorithm
 * `f_wrapper.vhd`: wrapper for the *cipher_f* component that takes as inputs the generic $`L`$ and $`R`$ data, applies the f function and the following xor operation to produce the new $`R`$ for the next round
 * `key_round.vhd`: component that applies the left-shift and the $`PC_2`$ permutation to the generic $`C`$ and $`D`$ data for the key schedule
 * `key_gen.vhd`: block that implements all the key schedule algorithm instantiating a *key_round* component for each of the 16 rounds
@@ -44,6 +44,25 @@ In this section the list of all the source code files is reported with a brief d
 * `counter.vhd`: counter component used to wait for the latency due to the pipeline before starting the comparation
 * `des_ctrl.vhd`: complete DES engine containing both datapath and state machine for the control
 * `des_cracker.vhd`: top-level entity used as wrapper for the *des_ctrl* to implement and manage the AXI4 lite machinery
+
+## DES package
+The `des_pkg.vhd` file contains all the functions, signal types and constants needed to implement both the DES algorithm and the rest of our cracker machine's design.
+
+The functions coded in the package are here listed:
+* `left_shift`: performs a left shift by *amount*, which can be equal to 1 or 2 depending on the round of the key schedule
+* `ip`: performs the initial permutation of the DES algorithm applying the corresponding table to the plain text
+* `fp`: performs the inverse of the initial permutation $`IP`$
+* `e`: performs the $`E`$ permutation of $`f`$ function applying the corresponding table
+* `p`: performs the $`P`$ permutation of $`f`$ function applying the corresponding table
+* `pc1`: applies the $`PC_1`$ table of the key schedule algorithm to a 64-bits key and returns a 56-bits key
+* `pc1_inv`: reconstructs the 56-bits secrete key from the permutated key (wich is composed of $`C_{16}`$ aggregated to $`D_{16}`$)
+* `pc2`: applies the $`PC_1`$ table of the key schedule algorithm to a 56-bits key and returns a 56-bits round key
+
+The new subtypes defined as `wXX` are `std_ulogic_vector` of `XX` bits. They allow us to handle the data as defined in the DES standard (from 1 to `XX`).
+
+In addition to all the constant tables needed to implement the DES algorithm, other two constant parameters have been defined inside the package:
+* `DES_NUMBER`: integer that defines the number of DES block instances in the design
+* `PIPE_STAGE`: natural that defines the number of pipeline stages placed along the datapath
 
 ## Datapath
 
@@ -69,7 +88,7 @@ The logic hidden inside the *KEY SELECTOR* block consists of:
 * an OR gate that takes DES_NUMBER signals, which are the outputs of all the comparators, and produces `found_local`. This signal is used from the control unit to point out that the secret key has been discovered;
 * a selector that, taking all the `cd16` signals and the set of outputs from the comparators, chooses the one coming to DES engines that found the secret key. Note that this logic unit has been coded in a behavioral way, in order to leave the implementation and the optimization to the synthesizer.
 
-As already explained, the `cd16` selected is used to reconstruct the 56-bits secret key. A register is placed before the $`PC_1^-1`$ block to synchronize that data with the `found` signal produced by the state machine in the control unit. Furthermore, the `cd16` data coming from the last DES machine is used to retrieve the last tried key `k` (through another $`PC_1^-1`$ block).
+As already explained, the `cd16` selected is used to reconstruct the 56-bits secret key. A register is placed before the $`PC_1^{-1}`$ block to synchronize that data with the `found` signal produced by the state machine in the control unit. Furthermore, the `cd16` data coming from the last DES machine is used to retrieve the last tried key `k` (through another $`PC_1^{-1}`$ block).
 
 As shown in the schematic, four pipeline stages are placed along the datapath:
 * after the accumulator
@@ -96,12 +115,12 @@ This section explain how the the controller manage the machine. The controller i
 | `found`          | `std_ulogic`                     | out       | raised when the secret key is found                           |
 
 A Moore state machine has been realized and the state diagram is shown in the following figure.
- 
+
 <img src="../doc/state_machine.png" alt="state machine" width="500" style="float: left; margin-right: 10px;" />
 
 The machine is controlled with four states:
 * **IDLE**: this is the waiting state where the machine is idle and waits for the start signal to be raised.
-* **WAIT_PIPE**: this is the state where the machine begin to search the keys but the output doesn't still have the right value due to the pipeline latency. So a counter is set to count through the pipeline stages. The output of the `key selector` is ignored. When the counter reaches the pipe stages number the `end_count` signal is raised and the next state will be the `COMPARE` state.
+* **WAIT_PIPE**: this is the state where the machine begin to search for the keys but the output doesn't still have the right value due to the pipeline latency. So a counter is set to count through the pipeline stages. The output of the `key selector` is ignored. When the counter reaches the pipe stages number the `end_count` signal is raised and the next state will be the `COMPARE` state.
 * **COMPARE**: From here the machine will generate and search the right key waiting for the `found_local` signal to be high.  
 * **FND**: this is the final state when the right key has been found. The found signal is raised for a clock cycle and the output contains the cracked key. Then the machine comes back to the `IDLE` state.
 
@@ -139,18 +158,49 @@ The cracking machine communicates with the CPU using the AXI4 lite protocol. It 
 
 ## Validation
 
-Three test benches have been developed in order to validate the design.
+Three test benches have been developed in order to validate the design. We spent a lot of effort to design good simulation environments, trying to cover as most unwanted and critical situation as possible.
 
 1. **DES validation**  
-The test bench [tb_des] validates the design [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plaintexts and keys; then, for each pair, it computes the ciphertext and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the chipered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles and a half to ensure the comparation to be synchronized: indeed, it must start after the delay due to the pipeline stages.
+The test bench [tb_des] validates the single DES engine [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plain texts and keys; then, for each pair, it computes the cipher text and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the ciphered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles to ensure synchronization with stimulus data: indeed, it must start after the delay due to the pipeline stages. An example of simulation is shown in the following screenshot.
+
+<img src="../doc/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 2. **DES controller validation**  
-The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random plain texts and keys, calculates the correspondent cipher text using a DES reference and feeds the des controller with the data. Also start and stop signals are randomly generated. Every clock cycle, the reference and the unit under test's signals are compared to verify their correctness. The random generation tries to cover all the possible situations, also stopping the controller before it could find the key.
+The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random signals, calculates the correspondent DES response using a reference implemented inside the test bench and feeds the des controller with the data. More in particular the behavior is the following:
+  * Random generation of plain text.
+  * Random generation of the starting key $`K_0`$
+  * Random generation of the distance $`d`$ between the starting key $`K_0`$ and the secret key $`K1`$
+  * Calculation of the secret key as $`K1 = K_0 + d`$
+  * Calculation of the cipher text using the reference, starting from the plain text and the secret key
+  * Generation of a random delay to start the machine
+  * Generation of a random stop delay used to stop the machine before the secret key is found. That happens with a probability of the 20%
+  * Calculation of the steps needed by the DES in order to retrieve the secret key. It's calculated as $`n_{iter}=(d - stop) / DES\_NUMBER + 1 + PIPE\_STAGES`$
+  * The start signal is given and, at every step, all the signals of the controller are checked with the reference
+
+The random generation tries to cover all the possible combinations of signals and timing events, also at the boundaries.  
+In the following image a normal execution of a cracking cycle is shown. The DES controller finds the key when the `found` signal is raised
+
+<img src="../doc/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
+
+In the following image, the cracker is stopped before it could find the key. The changing of the state to `IDLE` is notable. The DES is so ready then to start again a cracking cycle.
+
+<img src="../doc/ctrl_wave_s.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 3. **DES cracker validation**  
-The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but it implements and verify everything through AXI4 reads and writes.  
+The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but translates the reference to communicate with AXI4 protocol and verify every signal and register values through reads and writes. A AXI4 reader and writer has been implemented inside the simulation. More details had to be taken into account so the simulator is pretty complex. With respect to the [tb_des_ctrl] further behaviors are implemented:
+  * All the random possibilities of the controller validation are implemented also here
+  * AXI4 read testing `OKAY`, `DECERR` and `SLVERR` situations and read data using random addresses
+  * AXI4 write testing `OKAY`, `DECERR` and `SLVERR` situations using random addresses
+  * AXI4 read and writes are done also testing different response time of `rready` and `bready` in order to test the AXI state machine inside the DES cracker.
+  * Start signal is linked to a write to the most significant word of $`k_0`$
+  * Stop signal is linked to a write to the least significant word of $`k_0`$
+  * The freeze side effect during the read of $`K`$ is tested. In the following simulation image, the signal in gold yellow represents the saved $`K`$ that has been saved in order to test the $`k`$ freeze function.
 
-The design has been tested for 200 ms trying more than 30000 key possibilities and different $`K`$ and $`K_0`$ distances.
+The following image shows some cracking cycles. A lot of testing reads and writes can be noticed. The start and read signals are not really used but they are useful for a general understanding of how the test is proceeding. The purple signal represents the `irq` that is raised every time that a secret key is found. As written before, the gold signal `k_freeze` saves $`k`$ when its least significant bit is read and resumes when the most significant is read, in order to have the right reference for the $`k`$ AXI reads.
+
+<img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
+
+The design has been tested for 200 ms trying more than 40000 of random cracking situations.
 
 ## Synthesis results
 

@@ -138,7 +138,6 @@ package des_pkg is
 
     -- FUNCTIONS DECLARATION
     function left_shift(w: w28; amount: natural) return w28;
-    --function right_shift(w: w28, amount: natural) return w28;
     function ip(w: w64) return w64;
     function fp(w: w64) return w64;
     function e(w: w32) return w48;
