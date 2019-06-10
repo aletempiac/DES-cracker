@@ -26,7 +26,6 @@ Our design involves dividing the solution space into smaller sets of keys. These
 
 The machine designed is fully pipelined. In particular, the DES block (that processes the plaintext with different keys to produce the ciphertext) has been designed with 14 pipeline stages. Considering also the registers inserted in the overall datapath to split the combinatorial delay of the machine, we end up with a total of 18 pipeline stages.
 
-
 ## Source files
 
 In this section the list of all the source code files is reported with a brief description for each of them.
@@ -44,6 +43,25 @@ In this section the list of all the source code files is reported with a brief d
 * `counter.vhd`: counter component used to wait for the latency due to the pipeline before starting the comparation
 * `des_ctrl.vhd`: complete DES engine containing both datapath and state machine for the control
 * `des_cracker.vhd`: top-level entity used as wrapper for the *des_ctrl* to implement and manage the AXI4 lite machinery
+
+## DES package
+The `des_pkg.vhd` file contains all the functions, signal types and constants needed to implement both the DES algorithm and the rest of our cracker machine's design.
+
+The functions coded in the package are here listed:
+* `left_shift`: performs a left shift by *amount*, which can be equal to 1 or 2 depending on the round of the key schedule
+* `ip`: performs the initial permutation of the DES algorithm applying the corresponding table to the plain text
+* `fp`: performs the inverse of the initial permutation $`IP`$
+* `e`: performs the $`E`$ permutation of $`f`$ function applying the corresponding table
+* `p`: performs the $`P`$ permutation of $`f`$ function applying the corresponding table
+* `pc1`: applies the $`PC_1`$ table of the key schedule algorithm to a 64-bits key and returns a 56-bits key
+* `pc1_inv`: reconstructs the 56-bits secrete key from the permutated key (wich is composed of $`C_16`$ aggregated to $`D_16`$)
+* `pc2`: applies the $`PC_1`$ table of the key schedule algorithm to a 56-bits key and returns a 56-bits round key
+
+The new subtypes defined as `wXX` are `std_ulogic_vector` of `XX` bits. They are defined so that we can handle the data as defined in the DES standard (from 1 to `XX`).
+
+In addition to all the constant tables needed to implement the DES algorithm, other two constant parameters have been defined inside the package:
+* `DES_NUMBER`: integer that defines the number of DES block instances in the design
+* `PIPE_STAGE`: natural that defines the number of pipeline stages placed along the datapath
 
 ## Datapath
 
