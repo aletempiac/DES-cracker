@@ -6,6 +6,7 @@
 
 * [Introduction](#introduction)
 * [Source files](#source-files)
+* [DES package](#des-packege)
 * [Datapath](#datapath)
 * [Control](#control)
 * [AXI4 lite machinery](#axi4-lite-machinery)
@@ -22,10 +23,9 @@ The cracking machine is given a plaintext $`P`$, a ciphertext $`C`$, 64 bits eac
 
 All the detailed specifications for this project can be found in the [README.md](./README.md) file.
 
-Our design involves dividing the solution space into smaller sets of keys. These subsets are addressed to different DES engines that, running in parallel, are in charge of brute-forcing the keys until one of them find the correct solution. Every DES instance is given a starting key computed as $`K_0`$ plus an offset that depends on the number of DES engines used and the current iteration.
+Our design involves dividing the solution space into smaller sets of keys. These subsets are addressed to different DES engines that, running in parallel, are in charge of brute-forcing the keys until one of them finds the correct solution. Every DES instance is given a starting key computed as $`K_0`$ plus an offset that depends on the number of DES engines used and the current iteration.
 
 The machine designed is fully pipelined. In particular, the DES block (that processes the plaintext with different keys to produce the ciphertext) has been designed with 14 pipeline stages. Considering also the registers inserted in the overall datapath to split the combinatorial delay of the machine, we end up with a total of 18 pipeline stages.
-
 
 ## Source files
 
@@ -33,8 +33,8 @@ In this section the list of all the source code files is reported with a brief d
 
 * `des_pkg.vhd`: package file containing the definition of constants, new types and subtypes and all the functions used to implement the DES algorithm
 * `reg.vhd`: n-bits register with synchronous reset
-* `s_box.vhd`: component that implements a generic S box of the DES algorithm (it applies the S table to six bits and outputs the transformed 4 bits)
-* `cipher_f.vhd`: component that implements the Feistel f function of the DES algorithm
+* `s_box.vhd`: component that implements a generic S box of the DES algorithm (it applies the S table to 6 bits and outputs the transformed 4 bits)
+* `cipher_f.vhd`: component that implements the Feistel $`f`$ function of the DES algorithm
 * `f_wrapper.vhd`: wrapper for the *cipher_f* component that takes as inputs the generic $`L`$ and $`R`$ data, applies the f function and the following xor operation to produce the new $`R`$ for the next round
 * `key_round.vhd`: component that applies the left-shift and the $`PC_2`$ permutation to the generic $`C`$ and $`D`$ data for the key schedule
 * `key_gen.vhd`: block that implements all the key schedule algorithm instantiating a *key_round* component for each of the 16 rounds
@@ -44,6 +44,25 @@ In this section the list of all the source code files is reported with a brief d
 * `counter.vhd`: counter component used to wait for the latency due to the pipeline before starting the comparation
 * `des_ctrl.vhd`: complete DES engine containing both datapath and state machine for the control
 * `des_cracker.vhd`: top-level entity used as wrapper for the *des_ctrl* to implement and manage the AXI4 lite machinery
+
+## DES package
+The `des_pkg.vhd` file contains all the functions, signal types and constants needed to implement both the DES algorithm and the rest of our cracker machine's design.
+
+The functions coded in the package are here listed:
+* `left_shift`: performs a left shift by *amount*, which can be equal to 1 or 2 depending on the round of the key schedule
+* `ip`: performs the initial permutation of the DES algorithm applying the corresponding table to the plain text
+* `fp`: performs the inverse of the initial permutation $`IP`$
+* `e`: performs the $`E`$ permutation of $`f`$ function applying the corresponding table
+* `p`: performs the $`P`$ permutation of $`f`$ function applying the corresponding table
+* `pc1`: applies the $`PC_1`$ table of the key schedule algorithm to a 64-bits key and returns a 56-bits key
+* `pc1_inv`: reconstructs the 56-bits secrete key from the permutated key (wich is composed of $`C_16`$ aggregated to $`D_16`$)
+* `pc2`: applies the $`PC_1`$ table of the key schedule algorithm to a 56-bits key and returns a 56-bits round key
+
+The new subtypes defined as `wXX` are `std_ulogic_vector` of `XX` bits. They allow us to handle the data as defined in the DES standard (from 1 to `XX`).
+
+In addition to all the constant tables needed to implement the DES algorithm, other two constant parameters have been defined inside the package:
+* `DES_NUMBER`: integer that defines the number of DES block instances in the design
+* `PIPE_STAGE`: natural that defines the number of pipeline stages placed along the datapath
 
 ## Datapath
 
@@ -69,7 +88,7 @@ The logic hidden inside the *KEY SELECTOR* block consists of:
 * an OR gate that takes DES_NUMBER signals, which are the outputs of all the comparators, and produces `found_local`. This signal is used from the control unit to point out that the secret key has been discovered;
 * a selector that, taking all the `cd16` signals and the set of outputs from the comparators, chooses the one coming to DES engines that found the secret key. Note that this logic unit has been coded in a behavioral way, in order to leave the implementation and the optimization to the synthesizer.
 
-As already explained, the `cd16` selected is used to reconstruct the 56-bits secret key. A register is placed before the $`PC_1^-1`$ block to synchronize that data with the `found` signal produced by the state machine in the control unit. Furthermore, the `cd16` data coming from the last DES machine is used to retrieve the last tried key `k` (through another $`PC_1^-1`$ block).
+As already explained, the `cd16` selected is used to reconstruct the 56-bits secret key. A register is placed before the $`PC_1^(-1)`$ block to synchronize that data with the `found` signal produced by the state machine in the control unit. Furthermore, the `cd16` data coming from the last DES machine is used to retrieve the last tried key `k` (through another $`PC_1^(-1)`$ block).
 
 As shown in the schematic, four pipeline stages are placed along the datapath:
 * after the accumulator
@@ -101,7 +120,7 @@ A Moore state machine has been realized and the state diagram is shown in the fo
 
 The machine is controlled with four states:
 * **IDLE**: this is the waiting state where the machine is idle and waits for the start signal to be raised.
-* **WAIT_PIPE**: this is the state where the machine begin to search the keys but the output doesn't still have the right value due to the pipeline latency. So a counter is set to count through the pipeline stages. The output of the `key selector` is ignored. When the counter reaches the pipe stages number the `end_count` signal is raised and the next state will be the `COMPARE` state.
+* **WAIT_PIPE**: this is the state where the machine begin to search for the keys but the output doesn't still have the right value due to the pipeline latency. So a counter is set to count through the pipeline stages. The output of the `key selector` is ignored. When the counter reaches the pipe stages number the `end_count` signal is raised and the next state will be the `COMPARE` state.
 * **COMPARE**: From here the machine will generate and search the right key waiting for the `found_local` signal to be high.  
 * **FND**: this is the final state when the right key has been found. The found signal is raised for a clock cycle and the output contains the cracked key. Then the machine comes back to the `IDLE` state.
 
