@@ -200,7 +200,8 @@ The following image shows some cracking cycles. A lot of testing reads and write
 
 <img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
-The design has been tested for 200 ms trying more than 40000 of random cracking situations.
+The design has been tested for 200 ms trying more than 40000 of random cracking situations.  
+To execute the simulation the [des_sim.src] can help to compile the design and to open the right simulation. Also two files [wave_ctrl.do] and [wave_cracker.do] respectively for the controller and cracker validation, can be useful for a good placement and understanding of the waveforms.
 
 ## Synthesis results
 
