@@ -139,10 +139,10 @@ The cracking machine communicates with the CPU using the AXI4 lite protocol. It 
 
 ## Validation
 
-Three test benches have been developed in order to validate the design.
+Three test benches have been developed in order to validate the design. We spent a lot of effort to design good simulation environments, trying to cover as most unwanted and critical situation as possible.
 
 1. **DES validation**  
-The test bench [tb_des] validates the design [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plaintexts and keys; then, for each pair, it computes the ciphertext and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the chipered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles and a half to ensure the comparation to be synchronized: indeed, it must start after the delay due to the pipeline stages. An example of imulation is shown in the following screenshot.
+The test bench [tb_des] validates the single DES engine [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plain texts and keys; then, for each pair, it computes the cipher text and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the ciphered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles to ensure synchronization with stimulus data: indeed, it must start after the delay due to the pipeline stages. An example of simulation is shown in the following screenshot.
 
 <img src="../doc/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
@@ -158,18 +158,30 @@ The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench
   * Calculation of the steps needed by the DES in order to retrieve the secret key. It's calculated as $`n_{iter}=(d - stop) / DES\_NUMBER + 1 + PIPE\_STAGES`$
   * The start signal is given and every step all the signals of the controller are checked with the reference.2
 
-The random generation tries to cover all the possible combinations of signals and timing events.  
-In the following image a normal execution of a cracking cycle is shown. The DES controller finds the key when the `found` signal is raised.
+The random generation tries to cover all the possible combinations of signals and timing events, also at the boundaries.  
+In the following image a normal execution of a cracking cycle is shown. The DES controller finds the key when the `found` signal is raised
+
 <img src="../doc/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 In the following image, the cracker is stopped before it could find the key. The changing of the state to `IDLE` is notable. The DES is so ready then to start again a cracking cycle.
+
 <img src="../doc/ctrl_wave_s.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 3. **DES cracker validation**  
-The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but it implements and verify everything through AXI4 reads and writes.
+The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but translates the reference to communicate with AXI4 protocol and verify every signal and register values through reads and writes. A AXI4 reader and writer has been implemented inside the simulation. More details had to be taken into account so the simulator is pretty complex. With respect to the [tb_des_ctrl.vhd] further behavior are implemented:
+  * All the random possibilities of the controller validation are implemented also here
+  * AXI4 read testing `OKAY`, `DECERR` and `SLVERR` situations and right data using random addresses
+  * AXI4 write testing `OKAY`, `DECERR` and `SLVERR` situations using random addresses
+  * AXI4 read and writes are done also testing different response time of `rready` and `bready` in order to test the AXI state machine in the DES cracker.
+  * Start signal is linked to a write to the most significant word of $`k_0`$
+  * Stop signal is linked to a write to the least significant word of $`k_0`$
+  * The freeze side effect during the read of $`K`$ is tested. In the following simulation image, the signal in gold yellow represents the saved $`K`$ that has been saved in order to test the $`k`$ freeze function.
+
+The following image shows some cracking cycles. A lot of testing reads and writes can be noticed. The start and read signals are not really used but they are useful for a general understanding of how the test is proceeding. The purple signal represents the `irq` that is raised every time that a secret key is found. As written before, the gold signal `k_freeze` saves $`k`$ when its least significant bit is read and resumes when the most significant is read, in order to have the right reference for the $`k`$ AXI reads.
+
 <img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
-The design has been tested for 200 ms trying more than 30000 key possibilities and different $`K`$ and $`K_0`$ distances.
+The design has been tested for 200 ms trying more than 40000 of cracking random situations.
 
 ## Synthesis results
 
