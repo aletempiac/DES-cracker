@@ -200,7 +200,7 @@ The following image shows some cracking cycles. A lot of testing reads and write
 
 <img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
-The design has been tested for 200 ms trying more than 40000 of cracking random situations.
+The design has been tested for 200 ms trying more than 40000 of random cracking situations.
 
 ## Synthesis results
 
