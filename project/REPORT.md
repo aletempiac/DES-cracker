@@ -80,7 +80,23 @@ As shown in the schematic, four pipeline stages are placed along the datapath:
 This choice permits to decrease the critical path delay and increase the clock frequency.
 
 ## Control
-This section explain how the the controller manage the machine. A Moore state machine has been realized and the state diagram is shown in the following figure.  
+This section explain how the the controller manage the machine. The controller is implemented in the file [des_ctrl.vhd]. Its entity contains the following signals:
+
+|Name               | Type                             | Direction | Description                                                  |
+| :----            | :----                            | :----     | :----                                                         |
+| `clk`            | `std_ulogic`                     | in        | clock, the design is synchronized on the rising edge of `clk` |
+| `sresetn`        | `std_ulogic`                     | in        | **synchronous** active **low** reset                          |
+| `start`          | `std_ulogic`                     | in        | controller start signal                                       |
+| `stop`           | `std_ulogic`                     | in        | controller stop signal                                        |
+| `p`              | `std_ulogic_vector(63 downto 0)` | in        | the plaintext                                                 |
+| `c`              | `std_ulogic_vector(63 downto 0)` | in        | the ciphertext                                                |
+| `k0`             | `std_ulogic_vector(55 downto 0)` | in        | the starting key                                              |
+| `k`              | `std_ulogic_vector(55 downto 0)` | out       | the current key                                               |
+| `k1`             | `std_ulogic_vector(55 downto 0)` | out       | the found secret key                                          |
+| `found`          | `std_ulogic`                     | out       | raised when the secret key is found                           |
+
+A Moore state machine has been realized and the state diagram is shown in the following figure.
+ 
 <img src="../doc/state_machine.png" alt="state machine" width="500" style="float: left; margin-right: 10px;" />
 
 The machine is controlled with four states:
@@ -93,7 +109,33 @@ Whenever a stop signal is raised, the machine returns to the `IDLE` state.
 
 ## AXI4 lite machinery
 
-The cracking machine communicates with the CPU using the AXI4 lite protocol.
+The cracking machine communicates with the CPU using the AXI4 lite protocol. It is implemented inside the entity [des_cracker.vhd] that contains the following signals:
+
+| Name             | Type                             | Direction | Description                                                                                                            |
+| :----            | :----                            | :----     | :----                                                                                                                  |
+| `aclk`           | `std_ulogic`                     | in        | master clock from CPU part of Zynq core, the design is synchronized on the rising edge of `aclk`                       |
+| `aresetn`        | `std_ulogic`                     | in        | **synchronous** active **low** reset from CPU part of Zynq core (the leading _a_ means AXI, not asynchronous)          |
+| `s0_axi_araddr`  | `std_ulogic_vector(11 downto 0)` | in        | read address from CPU (12 bits = 4kB)                                                                                  |
+| `s0_axi_arvalid` | `std_ulogic`                     | in        | read address valid from CPU                                                                                            |
+| `s0_axi_arready` | `std_ulogic`                     | out       | read address acknowledge to CPU                                                                                        |
+| `s0_axi_awaddr`  | `std_ulogic_vector(11 downto 0)` | in        | write address from CPU (12 bits = 4kB)                                                                                 |
+| `s0_axi_awvalid` | `std_ulogic`                     | in        | write address valid flag from CPU                                                                                      |
+| `s0_axi_awready` | `std_ulogic`                     | out       | write address acknowledge to CPU                                                                                       |
+| `s0_axi_wdata`   | `std_ulogic_vector(31 downto 0)` | in        | write data from CPU                                                                                                    |
+| `s0_axi_wstrb`   | `std_ulogic_vector(3 downto 0)`  | in        | write byte enables from CPU                                                                                            |
+| `s0_axi_wvalid`  | `std_ulogic`                     | in        | write data and byte enables valid from CPU                                                                             |
+| `s0_axi_wready`  | `std_ulogic`                     | out       | write data and byte enables acknowledge to CPU                                                                         |
+| `s0_axi_rdata`   | `std_ulogic_vector(31 downto 0)` | out       | read data response to CPU                                                                                              |
+| `s0_axi_rresp`   | `std_ulogic_vector(1 downto 0)`  | out       | read status response (OKAY, EXOKAY, SLVERR or DECERR) to CPU                                                           |
+| `s0_axi_rvalid`  | `std_ulogic`                     | out       | read data and status response valid flag to CPU                                                                        |
+| `s0_axi_rready`  | `std_ulogic`                     | in        | read response acknowledge from CPU                                                                                     |
+| `s0_axi_bresp`   | `std_ulogic_vector(1 downto 0)`  | out       | write status response (OKAY, EXOKAY, SLVERR or DECERR) to CPU                                                          |
+| `s0_axi_bvalid`  | `std_ulogic`                     | out       | write status response valid to CPU                                                                                     |
+| `s0_axi_bready`  | `std_ulogic`                     | in        | write response acknowledge from CPU                                                                                    |
+| `irq`            | `std_ulogic`                     | out       | interrupt request to CPU                                                                                               |
+| `led`            | `std_ulogic_vector(3 downto 0)`  | out       | wired to the four user LEDs                                                                                            |
+
+
 
 ## Validation
 
