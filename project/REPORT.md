@@ -100,6 +100,7 @@ The cracking machine communicates with the CPU using the AXI4 lite protocol.
 Three test benches have been developed in order to validate the design.
 
 1. **DES validation**  
+The test bench [tb_des] validates the design [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plaintexts and keys; then, for each pair, it computes the ciphertext and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the chipered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles and a half to ensure the comparation to be synchronized: indeed, it must start after the delay due to the pipeline stages.
 
 2. **DES controller validation**  
 The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random plain texts and keys, calculates the correspondent cipher text using a DES reference and feeds the des controller with the data. Also start and stop signals are randomly generated. Every clock cycle, the reference and the unit under test's signals are compared to verify their correctness. The random generation tries to cover all the possible situations, also stopping the controller before it could find the key.
@@ -128,3 +129,8 @@ Regarding the area constraints we can refer to the utilization report generated 
 [des_ctrl.vhd]: sim/des_ctrl.vhd
 [tb_des_cracker]: sim/tb_des_cracker.vhd
 [des_cracker.vhd]: sim/tb_des_cracker.vhd
+[tb_des]: sim/tb_des.vhd
+[des.vhd]: sim/des.vhd
+[des_encrypt.py]: sim/des_encrypt.py
+[vector.txt]: sim/vector.txt
+[expected.txt]: sim/expetced.txt
