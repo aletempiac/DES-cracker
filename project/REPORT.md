@@ -55,7 +55,7 @@ The functions coded in the package are here listed:
 * `e`: performs the $`E`$ permutation of $`f`$ function applying the corresponding table
 * `p`: performs the $`P`$ permutation of $`f`$ function applying the corresponding table
 * `pc1`: applies the $`PC_1`$ table of the key schedule algorithm to a 64-bits key and returns a 56-bits key
-* `pc1_inv`: reconstructs the 56-bits secrete key from the permutated key (wich is composed of $`C_16`$ aggregated to $`D_16`$)
+* `pc1_inv`: reconstructs the 56-bits secrete key from the permutated key (wich is composed of $`C_{16}`$ aggregated to $`D_{16}`$)
 * `pc2`: applies the $`PC_1`$ table of the key schedule algorithm to a 56-bits key and returns a 56-bits round key
 
 The new subtypes defined as `wXX` are `std_ulogic_vector` of `XX` bits. They allow us to handle the data as defined in the DES standard (from 1 to `XX`).
@@ -88,7 +88,7 @@ The logic hidden inside the *KEY SELECTOR* block consists of:
 * an OR gate that takes DES_NUMBER signals, which are the outputs of all the comparators, and produces `found_local`. This signal is used from the control unit to point out that the secret key has been discovered;
 * a selector that, taking all the `cd16` signals and the set of outputs from the comparators, chooses the one coming to DES engines that found the secret key. Note that this logic unit has been coded in a behavioral way, in order to leave the implementation and the optimization to the synthesizer.
 
-As already explained, the `cd16` selected is used to reconstruct the 56-bits secret key. A register is placed before the $`PC_1^(-1)`$ block to synchronize that data with the `found` signal produced by the state machine in the control unit. Furthermore, the `cd16` data coming from the last DES machine is used to retrieve the last tried key `k` (through another $`PC_1^(-1)`$ block).
+As already explained, the `cd16` selected is used to reconstruct the 56-bits secret key. A register is placed before the $`PC_1^{-1}`$ block to synchronize that data with the `found` signal produced by the state machine in the control unit. Furthermore, the `cd16` data coming from the last DES machine is used to retrieve the last tried key `k` (through another $`PC_1^{-1}`$ block).
 
 As shown in the schematic, four pipeline stages are placed along the datapath:
 * after the accumulator
@@ -166,10 +166,39 @@ The test bench [tb_des] validates the design [des.vhd]. In order to do this simu
 <img src="../doc/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 2. **DES controller validation**  
-The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random plain texts and keys, calculates the correspondent cipher text using a DES reference and feeds the des controller with the data. Also start and stop signals are randomly generated. Every clock cycle, the reference and the unit under test's signals are compared to verify their correctness. The random generation tries to cover all the possible situations, also stopping the controller before it could find the key.
+The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random signals, calculates the correspondent DES response using a reference implemented inside the test bench and feeds the des controller with the data. More in particular the behavior is the following:
+  * Random generation of plain text.
+  * Random generation of the starting key $`K_0`$
+  * Random generation of the distance $`d`$ between the starting key $`K_0`$ and the secret key $`K1`$
+  * Calculation of the secret key as $`K1 = K_0 + d`$
+  * Calculation of the cipher text using the reference, starting from the plain text and the secret key
+  * Generation of a random delay to start the machine
+  * Generation of a random stop delay used to stop the machine before the secret key is found. That happens with a probability of the 20%
+  * Calculation of the steps needed by the DES in order to retrieve the secret key. It's calculated as $`n_{iter}=(d - stop) / DES\_NUMBER + 1 + PIPE\_STAGES`$
+  * The start signal is given and, at every step, all the signals of the controller are checked with the reference
+
+The random generation tries to cover all the possible combinations of signals and timing events, also at the boundaries.  
+In the following image a normal execution of a cracking cycle is shown. The DES controller finds the key when the `found` signal is raised
+
+<img src="../doc/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
+
+In the following image, the cracker is stopped before it could find the key. The changing of the state to `IDLE` is notable. The DES is so ready then to start again a cracking cycle.
+
+<img src="../doc/ctrl_wave_s.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 3. **DES cracker validation**  
-The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but it implements and verify everything through AXI4 reads and writes.  
+The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but translates the reference to communicate with AXI4 protocol and verify every signal and register values through reads and writes. A AXI4 reader and writer has been implemented inside the simulation. More details had to be taken into account so the simulator is pretty complex. With respect to the [tb_des_ctrl] further behaviors are implemented:
+  * All the random possibilities of the controller validation are implemented also here
+  * AXI4 read testing `OKAY`, `DECERR` and `SLVERR` situations and read data using random addresses
+  * AXI4 write testing `OKAY`, `DECERR` and `SLVERR` situations using random addresses
+  * AXI4 read and writes are done also testing different response time of `rready` and `bready` in order to test the AXI state machine inside the DES cracker.
+  * Start signal is linked to a write to the most significant word of $`k_0`$
+  * Stop signal is linked to a write to the least significant word of $`k_0`$
+  * The freeze side effect during the read of $`K`$ is tested. In the following simulation image, the signal in gold yellow represents the saved $`K`$ that has been saved in order to test the $`k`$ freeze function.
+
+The following image shows some cracking cycles. A lot of testing reads and writes can be noticed. The start and read signals are not really used but they are useful for a general understanding of how the test is proceeding. The purple signal represents the `irq` that is raised every time that a secret key is found. As written before, the gold signal `k_freeze` saves $`k`$ when its least significant bit is read and resumes when the most significant is read, in order to have the right reference for the $`k`$ AXI reads.
+
+<img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 The design has been tested for 200 ms trying more than 30000 key possibilities and different $`K`$ and $`K_0`$ distances.
 
