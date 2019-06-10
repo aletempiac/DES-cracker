@@ -158,8 +158,11 @@ The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench
   * Calculation of the steps needed by the DES in order to retrieve the secret key. It's calculated as $`n_{iter}=(d - stop) / DES\_NUMBER + 1 + PIPE\_STAGES`$
   * The start signal is given and every step all the signals of the controller are checked with the reference.2
 
-The random generation tries to cover all the possible situations.
+The random generation tries to cover all the possible combinations of signals and timing events.  
+In the following image a normal execution of a cracking cycle is shown. The DES controller finds the key when the `found` signal is raised.
 <img src="../doc/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
+
+In the following image, the cracker is stopped before it could find the key. The changing of the state to `IDLE` is notable. The DES is so ready then to start again a cracking cycle.
 <img src="../doc/ctrl_wave_s.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 3. **DES cracker validation**  
