@@ -151,7 +151,7 @@ The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench
   * Random generation of plain text.
   * Random generation of the starting key $`K_0`$
   * Random generation of the distance $`d`$ between the starting key $`K_0`$ and the secret key $`K`$
-  * Calculation of the secret key as $`K = K_0 + d$
+  * Calculation of the secret key as $`K = K_0 + d`$
   * Calculation of the cipher text using the reference, starting from the plain text and the secret key
   * Generation of a random delay to start the machine
   * Generation of a random stop delay used to stop the machine before the secret key is found. That happens with a probability of the 20%
