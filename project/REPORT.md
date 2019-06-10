@@ -151,12 +151,12 @@ The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench
   * Random generation of plain text.
   * Random generation of the starting key $`K_0`$
   * Random generation of the distance $`d`$ between the starting key $`K_0`$ and the secret key $`K`$
-  * Calculation of the secret key as $`K`=`K_0`+`d`$
+  * Calculation of the secret key as $`K = K_0 + d$
   * Calculation of the cipher text using the reference, starting from the plain text and the secret key
   * Generation of a random delay to start the machine
   * Generation of a random stop delay used to stop the machine before the secret key is found. That happens with a probability of the 20%
-  * Calculation of the steps needed by the DES in order to retrieve the secret key. It's calculated as $ n_iter=(`d` - stop) / DES_NUMBER + 1 + PIPE_STAGES $
-  * The start signal is given and every step all the signals of the controller are checked with the reference.
+  * Calculation of the steps needed by the DES in order to retrieve the secret key. It's calculated as $`n_{iter}=(d - stop) / DES\_NUMBER + 1 + PIPE\_STAGES`$
+  * The start signal is given and every step all the signals of the controller are checked with the reference.2
 
 The random generation tries to cover all the possible situations.
 <img src="../doc/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
