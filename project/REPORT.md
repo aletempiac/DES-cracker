@@ -165,10 +165,27 @@ The test bench [tb_des] validates the design [des.vhd]. In order to do this simu
 <img src="../doc/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 2. **DES controller validation**  
-The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random plain texts and keys, calculates the correspondent cipher text using a DES reference and feeds the des controller with the data. Also start and stop signals are randomly generated. Every clock cycle, the reference and the unit under test's signals are compared to verify their correctness. The random generation tries to cover all the possible situations, also stopping the controller before it could find the key.
+The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random signals, calculates the correspondent DES response using a reference implemented inside the test bench and feeds the des controller with the data. More in particular the behavior is the following:
+  * Random generation of plain text.
+  * Random generation of the starting key $`K_0`$
+  * Random generation of the distance $`d`$ between the starting key $`K_0`$ and the secret key $`K`$
+  * Calculation of the secret key as $`K = K_0 + d`$
+  * Calculation of the cipher text using the reference, starting from the plain text and the secret key
+  * Generation of a random delay to start the machine
+  * Generation of a random stop delay used to stop the machine before the secret key is found. That happens with a probability of the 20%
+  * Calculation of the steps needed by the DES in order to retrieve the secret key. It's calculated as $`n_{iter}=(d - stop) / DES\_NUMBER + 1 + PIPE\_STAGES`$
+  * The start signal is given and every step all the signals of the controller are checked with the reference.2
+
+The random generation tries to cover all the possible combinations of signals and timing events.  
+In the following image a normal execution of a cracking cycle is shown. The DES controller finds the key when the `found` signal is raised.
+<img src="../doc/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
+
+In the following image, the cracker is stopped before it could find the key. The changing of the state to `IDLE` is notable. The DES is so ready then to start again a cracking cycle.
+<img src="../doc/ctrl_wave_s.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 3. **DES cracker validation**  
-The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but it implements and verify everything through AXI4 reads and writes.  
+The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but it implements and verify everything through AXI4 reads and writes.
+<img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 The design has been tested for 200 ms trying more than 30000 key possibilities and different $`K`$ and $`K_0`$ distances.
 
