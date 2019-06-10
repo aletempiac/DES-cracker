@@ -158,10 +158,10 @@ The cracking machine communicates with the CPU using the AXI4 lite protocol. It 
 
 ## Validation
 
-Three test benches have been developed in order to validate the design. We spent a lot of effort to design good simulation environments, trying to cover as most unwanted and critical situation as possible.
+Three test benches have been developed in order to validate the design.
 
 1. **DES validation**  
-The test bench [tb_des] validates the single DES engine [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plain texts and keys; then, for each pair, it computes the cipher text and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the ciphered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles to ensure synchronization with stimulus data: indeed, it must start after the delay due to the pipeline stages. An example of simulation is shown in the following screenshot.
+The test bench [tb_des] validates the design [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plaintexts and keys; then, for each pair, it computes the ciphertext and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the chipered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles and a half to ensure the comparation to be synchronized: indeed, it must start after the delay due to the pipeline stages. An example of imulation is shown in the following screenshot.
 
 <img src="../doc/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
@@ -200,11 +200,11 @@ The following image shows some cracking cycles. A lot of testing reads and write
 
 <img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
-The design has been tested for 200 ms trying more than 40000 of random cracking situations.
+The design has been tested for 200 ms trying more than 30000 key possibilities and different $`K`$ and $`K_0`$ distances.
 
 ## Synthesis results
 
-In order to synthesize the DES cracker for the Zynq core of the Zybo board, we designed a Tcl synthesis script.
+In order to synthesize the DES cracker for the Zynq core of the Zybo board, we designed a Tcl script called [des_cracker.syn.tcl].
 
 The array set of I/Os contains only the four `led` outputs that are mapped to the corresponding pins of the Zybo board. The output for the interrupt request to the CPU is connected to the reserved `IRQ_F2P` pin and configured to use the fabric interrupt of the board.
 
@@ -212,9 +212,9 @@ A variable `frequency_mhz` has been defined in the script to set the clock frequ
 
 Since the goal of this project is to optimally use the FPGA resources of the Zync core, the synthesis has been performed for different values of clock frequency and number of DES block instancies until we found the best solution for the design that met the board's contraints.
 
-From the synthesis reports it is possible to analyze the results obtained with the various solutions. In particular, from the timing report we can see which is the clock frequency synthesized and check which is the critical path of our design. The maximum speed for which the design can meet all the timing constraints is reached with a frequency equal to 187.512 MHz, that corresponds to a clock period of 5.333 ns. The critical path is not inside the designed datapath but in the AXI4 protocol machinery. This maximum delay path produces a slack of 0.09 ns, which is the difference between the required time and the arrival time to reach the last cell of the path.
+From the synthesis reports it is possible to analyze the results obtained with the various solutions. In particular, from the [timing report] we can see which is the clock frequency synthesized and check which is the critical path of our design. The maximum speed for which the design can meet all the timing constraints is reached with a frequency equal to 187.512 MHz, that corresponds to a clock period of 5.333 ns. The critical path is not inside the designed datapath but in the AXI4 protocol machinery. This maximum delay path produces a slack of 0.09 ns, which is the difference between the required time and the arrival time to reach the last cell of the path.
 
-Regarding the area constraints we can refer to the utilization report generated by the synthesis. The solution that uses the highest number of FPGA's slices consists on instantiating 12 DES blocks (specified in the code by the `DES_NUMBER` parameter). In this case the percentage of Slice LUTs used in the Zynq core is 92.38% and most of them are used for the logic. The Slice registers used as Flip-Flops are 19201 (corresponding to 54.55%) and are mainly due to the pipeline stages.
+Regarding the area constraints we can refer to the [utilization report] generated by the synthesis. The solution that uses the highest number of FPGA's slices consists on instantiating 12 DES blocks (specified in the code by the `DES_NUMBER` parameter). In this case the percentage of Slice LUTs used in the Zynq core is 92.38% and most of them are used for the logic. The Slice registers used as Flip-Flops are 19201 (corresponding to 54.55%) and are mainly due to the pipeline stages.
 
 
 [tb_des_ctrl]: sim/tb_des_ctrl.vhd
@@ -226,3 +226,6 @@ Regarding the area constraints we can refer to the utilization report generated 
 [des_encrypt.py]: sim/des_encrypt.py
 [vector.txt]: sim/vector.txt
 [expected.txt]: sim/expetced.txt
+[des_cracker.syn.tcl]: syn/des_cracker.syn.tcl
+[timing report]: syn/reports/des_cracker.timing.rpt
+[utilization report]: syn/reports/des_cracker.utilization.rpt
