@@ -227,17 +227,17 @@ Regarding the area constraints we can refer to the utilization report generated 
 
 The results just described are summarized in the following table.
 
-| Timing                                                        |
-| :----                    | :----                              |
-| Clock frequency [MHz]    | 187.512                            |
-| Clock period [ns]        | 5.333                              |
-| Slack [ns]               | 0.09                               |
+| Timing                                                        |  
+| :----                    | :----                              |  
+| Clock frequency [MHz]    | 187.512                            |  
+| Clock period [ns]        | 5.333                              |  
+| Slack [ns]               | 0.09                               |  
 
-| Utilization                                                   |
-| :----                    | :----                              |
-| DES instances            | 12                                 |
-| Slice LUTs               | 92.38 %                            |
-| Flip-Flops               | 54.5 %                             |
+| Utilization                                                   |  
+| :----                    | :----                              |  
+| DES instances            | 12                                 |  
+| Slice LUTs               | 92.38 %                            |  
+| Flip-Flops               | 54.5 %                             |  
 
 Since the DES cracker tries 12 keys per clock cycle, and considering the maximum clock frequency achieved with the synthesis, the final throughput of tried keys per second is equal to 2,250,144,000.  
 
