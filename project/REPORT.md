@@ -1,6 +1,10 @@
-# Hardware DES cracker - REPORT
+# Project Report - Hardware DES cracker
 
-#### Authors: Pietro Mambelli, Alessandro Tempia Calvino
+ The report and all source files can be found in the `Alessandro.TempiaCalvino` branch.
+
+## Team members:
+* Pietro Mambelli, mambelli@eurecom.fr
+* Alessandro Tempia Calvino, tempiaa@eurecom.fr
 
 #### Contents:
 
@@ -17,15 +21,15 @@
 
 This project aims at designing and implementing a machine to crack the DES (Data Encryption Standard) encryption algorithm.
 
-Taking into account the contraints of the boards used (Zybo boards) in terms of timing and resource utilization, the idea behind this project is to instantiate as many DES encryption engines as possible and to distribute the computation effort among them.
+Taking into account the constraints of the boards used (Zybo boards) in terms of timing and resource utilization, the idea behind this project is to instantiate as many DES encryption engines as possible and to distribute the computation effort among them.
 
-The cracking machine is given a plaintext $`P`$, a ciphertext $`C`$, 64 bits each, and a 56-bits starting secret key $`K_0`$. It then try to brute-force all the possible 56-bits keys $`K\ge K_0`$ until the result of the $`P`$ encryption equals $`C`$. When the match have been found the cracking machine stores the corresponding secret key $`K_1`$ in a register and raises an interrupt to inform the software stack that runs on the ARM CPU of the Zynq core.
+The cracking machine is given a plaintext $`P`$, a ciphertext $`C`$, 64 bits each, and a 56-bits starting secret key $`K_0`$. It then tries to brute-force all the possible 56-bits keys $`K\ge K_0`$ until the result of the $`P`$ encryption equals $`C`$. When the match is found the cracking machine stores the corresponding secret key $`K_1`$ in a register and raises an interrupt to inform the software stack that runs on the ARM CPU of the Zynq core.
 
 All the detailed specifications for this project can be found in the [README.md](./README.md) file.
 
-Our design involves dividing the solution space into smaller sets of keys. These subsets are addressed to different DES engines that, running in parallel, are in charge of brute-forcing the keys until one of them finds the correct solution. Every DES instance is given a starting key computed as $`K_0`$ plus an offset that depends on the number of DES engines used and the current iteration.
+Our design involves dividing the solution space into smaller sets of keys. These subsets are addressed to different DES engines that, running in parallel, are in charge of brute-forcing the keys until one of them finds a match between the produced ciphertext and the reference. Every DES instance is given a starting key that is computed as $`K_0`$ plus an offset that depends on the number of DES engines used and the current iteration (more on this in the [Datapath](#datapath) section).
 
-The machine designed is fully pipelined. In particular, the DES block (that processes the plaintext with different keys to produce the ciphertext) has been designed with 14 pipeline stages. Considering also the registers inserted in the overall datapath to split the combinatorial delay of the machine, we end up with a total of 18 pipeline stages.
+The machine designed is fully pipelined. In particular, the DES block (the one that processes the plaintext with different keys to produce the ciphertext) has been designed with 14 pipeline stages. Considering also the registers inserted along the overall datapath to split the combinatorial delay of the machine, we end up with a total of 18 pipeline stages.
 
 ## Source files
 
@@ -33,7 +37,7 @@ In this section the list of all the source code files is reported with a brief d
 
 * `des_pkg.vhd`: package file containing the definition of constants, new types and subtypes and all the functions used to implement the DES algorithm
 * `reg.vhd`: n-bits register with synchronous reset
-* `s_box.vhd`: component that implements a generic S box of the DES algorithm (it applies the S table to 6 bits and outputs the transformed 4 bits)
+* `s_box.vhd`: component that implements a generic S-Box of the DES algorithm (it applies the S-table to 6 bits and outputs the transformed 4 bits)
 * `cipher_f.vhd`: component that implements the Feistel $`f`$ function of the DES algorithm
 * `f_wrapper.vhd`: wrapper for the *cipher_f* component that takes as inputs the generic $`L`$ and $`R`$ data, applies the f function and the following xor operation to produce the new $`R`$ for the next round
 * `key_round.vhd`: component that applies the left-shift and the $`PC_2`$ permutation to the generic $`C`$ and $`D`$ data for the key schedule
@@ -55,12 +59,12 @@ The functions coded in the package are here listed:
 * `e`: performs the $`E`$ permutation of $`f`$ function applying the corresponding table
 * `p`: performs the $`P`$ permutation of $`f`$ function applying the corresponding table
 * `pc1`: applies the $`PC_1`$ table of the key schedule algorithm to a 64-bits key and returns a 56-bits key
-* `pc1_inv`: reconstructs the 56-bits secrete key from the permutated key (wich is composed of $`C_{16}`$ aggregated to $`D_{16}`$)
+* `pc1_inv`: reconstructs the 56-bits secrete key from the permutated key (wich is composed of $`C_{16}`$ concatenated with $`D_{16}`$)
 * `pc2`: applies the $`PC_1`$ table of the key schedule algorithm to a 56-bits key and returns a 56-bits round key
 
 The new subtypes defined as `wXX` are `std_ulogic_vector` of `XX` bits. They allow us to handle the data as defined in the DES standard (from 1 to `XX`).
 
-In addition to all the constant tables needed to implement the DES algorithm, other two constant parameters have been defined inside the package:
+In addition to all the constant tables needed to implement the DES algorithm, other two important constant parameters have been defined inside the package:
 * `DES_NUMBER`: integer that defines the number of DES block instances in the design
 * `PIPE_STAGE`: natural that defines the number of pipeline stages placed along the datapath
 
@@ -72,9 +76,11 @@ This section is dedicated to the explanation of the DES cracker's datapath. The 
 
 Referring to the schematic, the input data are the plaintext $`P`$, the ciphertext $`C`$ (each of them of 64 bits) and the 56-bits starting key `k0`. Starting from `k0`, the new keys must be processed to feed each DES engine at every iteration. First of all, an accumulator (composed by an adder and a register) generates a new key adding `DES_NUMBER` to `k0` at each clock cycle: a mux is placed before it in order to select `k0` as input at the first iteration.
 
-The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). Moreover, these 56-bits keys must be extended because the generic DES block takes as input a 64-bits key. Note that the bits added in the extension should be parity bits: since they are not used for the purpose of cracking the algorithm, they are set to 0.
+The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). For instance, at the first iteration DES_0 receives the key $`k0`$, while th generic DES_i receives the key $`k0+i`$. At the iteration j, DES_0 receives the key $`k0+j*DES_NUMBER`$, while the generic DES_i receives the key $`k0+jxDES_NUMBER+i`$.
 
-The DES engine has been designed according to the common scheme of the algorithm. A pipeline stage is placed between the logic used at each round, except for the initial stage (after the IP permutation) and the final stage (before the FP permutation).
+Moreover, these 56-bits keys must be extended because the DES blocks take as input a 64-bits key. Note that the bits added in the extension should be parity bits: since they are not used for the purpose of cracking the algorithm, we decided to set them to 0.
+
+The DES engine has been designed according to the common scheme of the algorithm. A pipeline stage is placed between the logic used at each round, except for the initial stage (after the IP permutation) and the final stage (before the FP permutation): the number of stages for each DES block is then 14.
 
 The outputs of every DES engine are:
 * the message ciphered with the last tried key
@@ -201,7 +207,7 @@ The following image shows some cracking cycles. A lot of testing reads and write
 
 <img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
-The design has been tested for 200 ms trying more than 40000 of random cracking situations.  
+The design has been tested for 200 ms trying more than 40000 random cracking situations.  
 To execute the simulation the [des_sim.src] can help to compile the design and to open the right simulation. Also the files [wave_ctrl.do] and [wave_cracker.do], respectively for the controller and cracker validation, can be useful for a good placement and understanding of the waveforms.
 
 ## Synthesis results
@@ -218,7 +224,12 @@ From the synthesis reports it is possible to analyze the results obtained with t
 
 Regarding the area constraints we can refer to the utilization report generated by the synthesis. The solution that uses the highest number of FPGA's slices consists on instantiating 12 DES blocks (specified in the code by the `DES_NUMBER` parameter). In this case the percentage of Slice LUTs used in the Zynq core is 92.38% and most of them are used for the logic. The Slice registers used as Flip-Flops are 19201 (corresponding to 54.55%) and are mainly due to the pipeline stages.
 
+Since the DES cracker tries 12 keys per clock cycle, and considering the maximum clock frequency achieved with the synthesis, the final throughput of tried keys per second is equal to 2,250,144,000.  
+
 ## Conclusions
+
+Considering the worst case scenario, this implementation can find the correct key in at most 370 days. Having 40 Zybo boards connected and working in parallel, the DES algorithm can be cracked in at most 9 days. This result can be compared to the performances achieved in 1999 by the "Deep Crack" with a budget of $200,000 or with 1000 recent high end PCs.
+
 Note that design has been optimized for the `Zybo` board where there is space only for 12 DES machines. In case of bigger FPGAs the design should be changed a bit. One reason is the `KEY SELECTOR` operation because it could be really slow with many inputs. In that case, the best idea is to revise it into a pipelined tree structure. Since in theory is composed by multiplexers,  it is very easy. The second reason could be the presence of buffers for delivering the same signal to a lot of resources that could decrease the timing performances. In that case a timing analysis is required to evaluate the possibility of replicating some hardware in order to get rid of the buffers.
 
 
