@@ -1,186 +1,106 @@
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/io.h>
-#include <linux/uaccess.h>
-#include <linux/device.h>
-#include <linux/platform_device.h>
-#include <linux/cdev.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
 
-#define DRIVER_NAME "DES"
-#define COMPATIBLE_STRING	"xlnx,des-cracker-1.0"
+#include <fcntl.h>
+#include <errno.h>
+#include <string.h>
+#include <stdint.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <inttypes.h>
 
 /* Macro that defines informations about the kernel module*/
-MODULE_AUTHOR("Mambelli, Tempia Calvino");
-MODULE_LICENSE("GPL");
-MODULE_DESCRIPTION(DRIVER_NAME ": software driver for DES");
-MODULE_ALIAS(DRIVER_NAME);
-MODULE_INFO(intree, "Y"); // declare module as in-tree to avoid "tainted kernel" warning
+// The device file
+#define DES_DEVICE  "/dev/uio0"
+// The size of the address space of our hardware peripheral
+#define DES_SIZE     0x1000
 
-struct resource *res;     // structure used to access resources of hardware device from device tree
-unsigned long remap_size; // size of address space of hardware device
-void __iomem *base_addr;  // virtual base address of hardware device
-static dev_t dev;         // device major/minor numbers
-static struct cdev c_dev; // structure used to represent a character device
-static struct class *cl;  // structure used to represent a device class
+int main(int argc, char **argv) {
+  int status = 0; // return status
+  int fd;         // file descriptor for device file
+  // the interface registers of the hardware peripheral, memory-mapped in
+  // virtual address space
+  volatile uint32_t *regs;
 
-/* called on device open. does nothing. return 0 (no error). */
-static int des_open(struct inode *inode, struct file *fp)
-{
-	return 0;
-}
+  uint32_t plaintext_h, cyphertext_h, k0_h;
+  uint32_t plaintext_l, cyphertext_l, k0_l;
+  uint32_t k_h, k_l, k1_h, k1_l;
 
-/* called on device close. does nothing. return 0 (no error). */
-static int des_close(struct inode *inode, struct file *fp)
-{
-	return 0;
-}
-
-/* called on device read. read 8 bytes (data and status). */
-static ssize_t des_read(struct file *fp, char *buf, size_t count, loff_t * f_pos)
-{
-	uint64_t data; // read data
-  int tmp = 42;  // used to check endianess
-
-	rmb(); // memory read barrier
-
-  if(*(char *)&tmp == 42)
-  { // little endian
-    data = ioread32(base_addr + 4);
-    data <<= 32;
-    data |= ioread32(base_addr);
+  if (argc!=7) {
+  	fprintf(stderr, "ARGS error: plaintext, cyphertext, k0\n");
+	return -1;
   }
-  else
-  { // big endian
-    data = ioread32(base_addr);
-    data <<= 32;
-    data |= ioread32(base_addr + 4);
+
+  plaintext_h = strtol(argv[1], NULL, 16);
+  plaintext_l = strtol(argv[2], NULL, 16);
+  cyphertext_h = strtol(argv[3], NULL, 16);
+  cyphertext_l = strtol(argv[4], NULL, 16);
+  k0_h = strtol(argv[5], NULL, 16);
+  k0_l = strtol(argv[6], NULL, 16);
+
+  // Open device
+  fd = open(DES_DEVICE, O_RDWR);
+  if(fd == -1) {
+    fprintf(stderr, "Cannot open device file %s: %s\n", DES_DEVICE, strerror(errno));
+    return -1;
   }
-	if(copy_to_user(buf,&data,sizeof(uint64_t))) // copy read data to user space
-	{
-		return -EACCES; // if error return -EACCES error code
-	}
-	return sizeof(uint64_t); // return number of read bytes
+
+  // Map device file in memory, read-only, shared with other processes mapping
+  // the same memory region
+  regs = mmap(NULL, DES_SIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+  if(regs == MAP_FAILED) {
+    fprintf(stderr, "Mapping error: %s\n", strerror(errno));
+    close(fd);
+    return -1;
+  }
+
+  printf("executing for:\n\tplaintext: " "0x%08" PRIx32, plaintext_h);
+  printf("%08" PRIx32 "\n", plaintext_l);
+  printf("\tcyphertext: " "0x%08" PRIx32, cyphertext_h);
+  printf("%08" PRIx32 "\n", cyphertext_l);
+  printf("\tk0: " "0x%06" PRIx32, k0_h);
+  printf("%08" PRIx32 "\n", k0_l);
+
+  // Infinite loop waiting for interrupts
+  while(1) {
+    uint32_t interrupts; // interrupts counter
+
+    // Enable interrupts
+    interrupts = 1;
+    if(write(fd, &interrupts, sizeof(interrupts)) < 0) {
+      fprintf(stderr, "Cannot enable interrupts: %s\n", strerror(errno));
+      status = -1;
+      break;
+    }
+
+	regs[0]=(uint32_t) (plaintext_l);
+	regs[1]=(uint32_t) (plaintext_h);
+	regs[2]=(uint32_t) (cyphertext_l);
+	regs[3]=(uint32_t) (cyphertext_h);
+	regs[4]=(uint32_t) (k0_l);
+	regs[5]=(uint32_t) (k0_h);
+
+    // Wait for interrupt
+    if(read(fd, &interrupts, sizeof(interrupts)) < 0) {
+      fprintf(stderr, "Cannot read device file: %s\n", strerror(errno));
+      status = -1;
+      break;
+    }
+
+    printf("Received %u interrupts\n", interrupts);\
+	k1_h=regs[9];
+	k1_l=regs[8];
+    // Read and display content of interface registers
+    printf("\tK1: " "0x%06"PRIx32, k1_h);
+    printf("%08"PRIx32 "\n", k1_l);
+  }
+
+  // Unmap
+  munmap((void*)regs, DES_SIZE);
+  // Close device file
+  close(fd);
+
+  return status;
 }
-
-/* supported file operations */
-static const struct file_operations des_operations = {
-  .owner = THIS_MODULE,
-	.open = des_open,
-	.release = des_close,
-	.read = des_read,
-};
-
-/* called when removing module */
-static int des_remove(struct platform_device *pdev)
-{
-	device_destroy(cl, dev);                    // remove device from class
-	class_destroy(cl);                          // delete class
-	cdev_del(&c_dev);                           // delete cdev structure
-	unregister_chrdev_region(dev,1);            // unregister device major number
-	iounmap(base_addr);                         // unmap base address
-	release_mem_region(res->start, remap_size); // deallocate physical address space
-  printk(KERN_INFO DRIVER_NAME " module removed.\n");
-  printk(KERN_INFO DRIVER_NAME " YOUR BYE MESSAGE\n");
-	return 0;
-}
-
-/* This function is called when the module is linked to the kernel. The
- * difference with the classic init function is that we have acces to
- * information on the device defined in the device tree. This information is in
- * the platform_device structure */
-static int des_probe(struct platform_device *pdev)
-{
-	int ret = 0;            // return values (error code), 0=no error
-	struct device *dev_ret; // structure representing device
-
-	/* get information about the memory ressources from device tree */
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if(!res) {
-		dev_err(&pdev->dev, "no memory ressource found\n");
-		return -ENODEV;
-	}
-
-  /* try to allocate physical address space of device */
-	remap_size = res->end - res->start + 1;
-	if(!request_mem_region(res->start, remap_size, pdev->name)) {
-		dev_err(&pdev->dev, "could not reserve IO address range\n");
-		return -ENXIO;
-	}
-
-  /* remap allocated physical address space to virtual address space */
-	base_addr = ioremap(res->start, remap_size);
-	if (base_addr == NULL) {
-		dev_err(&pdev->dev, "could not ioremap memory at 0x%08lx\n", (unsigned long)res->start);
-		ret = -ENOMEM;
-		goto err_release_region;
-	}
-
-	if((ret = alloc_chrdev_region(&dev, 0, 1, "des"))) // request device major number
-	{
-		dev_err(&pdev->dev, "could not allocate device major number\n");
-		goto err_unmap;
-	}
-
-	cdev_init(&c_dev, &des_operations);    // initialize cdev structure
-
-	if((ret = cdev_add(&c_dev, dev, 1)) < 0) // register cdev structure to kernel, with device major number dev
-	{
-		dev_err(&pdev->dev, "couldn't add the cdev structure\n");
-		goto err_unregister;
-	}
-
-	if(IS_ERR(cl = class_create(THIS_MODULE, "des"))) // create device class
-	{
-		dev_err(&pdev->dev, "could not create device class\n");
-		goto err_delete_cdev;
-	}
-
-	if(IS_ERR(dev_ret = device_create(cl, NULL, dev, NULL, "des"))) // populate device info under class
-	{
-		dev_err(&pdev->dev, "error in device create\n");
-		goto err_class_destroy;
-	}
-  	printk(KERN_INFO DRIVER_NAME " module loaded.\n");
-	printk(KERN_INFO DRIVER_NAME " mapped at virtual address 0x%08lx\n", (unsigned long) base_addr);
-	printk(KERN_INFO DRIVER_NAME " YOUR HELLO MESSAGE\n");
-	return 0;
-
-err_class_destroy:
-	class_destroy(cl);
-err_delete_cdev:
-	cdev_del(&c_dev);
-err_unregister:
-	unregister_chrdev_region(dev,1);
-err_unmap:
-	iounmap(base_addr);
-err_release_region:
-	release_mem_region(res->start, remap_size);
-	return ret;
-}
-
-/* This structure contains all the compatible strings of the devices the driver
- * can work with. The last element of the list must be empty */
-static const struct of_device_id des_of_match[] = {
-	{.compatible  = COMPATIBLE_STRING},
-	{},
-};
-
-/* Format the structure of_device_id */
-MODULE_DEVICE_TABLE(of, des_of_match);
-
-/* We assemble all the functions and structures previously defined in this
- * structure. It will be passed to the macro that register the module to the
- * kernel */
-static struct platform_driver des_drv = {
-	.driver = {
-		.name = DRIVER_NAME,
-		.owner = THIS_MODULE,
-		.of_match_table = des_of_match},
-	.probe = des_probe,
-	.remove = des_remove
-};
-
-/* This macro is used to register the module to the kernel. It creates the
- * __init and __exit functions and bind them with the module_init() and
- * module_exit() macros */
-module_platform_driver(des_drv);
