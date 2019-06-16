@@ -260,9 +260,9 @@ Note that design has been optimized for the `Zybo` board where there is space on
 [des_cracker.vhd]:      vhdl/sim/tb_des_cracker.vhd
 [tb_des]:               vhdl/sim/tb_des.vhd
 [des.vhd]:              vhdl/sim/des.vhd
-[des_encrypt.py]:       vhdl/sim/des_encrypt.py
-[vector.txt]:           vhdl/sim/vector.txt
-[expected.txt]:         vhdl/sim/expetced.txt
+[des_encrypt.py]:       vhdl/sim/tb_des_reference/des_encrypt.py
+[vector.txt]:           vhdl/sim/tb_des_reference/vector.txt
+[expected.txt]:         vhdl/sim/tb_des_reference/expetced.txt
 [des_sim.src]:          vhdl/sim/des_sim.src
 [wave_ctrl.do]:         vhdl/sim/wave_ctrl.do
 [wave_cracker.do]:      vhdl/sim/wave_cracker.do
