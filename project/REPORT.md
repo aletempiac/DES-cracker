@@ -76,7 +76,7 @@ This section is dedicated to the explanation of the DES cracker's datapath. The 
 
 Referring to the schematic, the input data are the plaintext $`P`$, the ciphertext $`C`$ (each of them of 64 bits) and the 56-bits starting key `k0`. Starting from `k0`, the new keys must be processed to feed each DES engine at every iteration. First of all, an accumulator (composed by an adder and a register) generates a new key adding `DES_NUMBER` to `k0` at each clock cycle: a mux is placed before it in order to select `k0` as input at the first iteration.
 
-The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). For instance, at the first iteration DES_0 receives the key $`k0`$, while th generic DES_i receives the key $`k0+i`$. At the iteration j, DES_0 receives the key $`k0+j*DES_NUMBER`$, while the generic DES_i receives the key $`k0+jxDES_NUMBER+i`$.
+The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). For instance, at the first iteration DES_0 receives the key k0, while th generic DES_i receives the key k0+i. At the iteration j, DES_0 receives the key k0+j*DES_NUMBER, while the generic DES_i receives the key k0+j*DES_NUMBER+i.
 
 Moreover, these 56-bits keys must be extended because the DES blocks take as input a 64-bits key. Note that the bits added in the extension should be parity bits: since they are not used for the purpose of cracking the algorithm, we decided to set them to 0.
 
@@ -106,7 +106,7 @@ This choice permits to decrease the critical path delay and increase the clock f
 The throughput of the datapath is of DES_NUMBER-1 keys tried per clock cycle.
 
 ## Control
-This section explain how the the controller manage the machine. The controller is implemented in the file [des_ctrl.vhd]. Its entity contains the following signals:
+This section explain how the controller manages the machine. The controller ha been implemented in the file [des_ctrl.vhd]. Its entity contains the following signals:
 
 |Name               | Type                             | Direction | Description                                                  |
 | :----            | :----                            | :----     | :----                                                         |
@@ -125,13 +125,13 @@ A Moore state machine has been realized and the state diagram is shown in the fo
 
 <img src="../doc/state_machine.png" alt="state machine" width="500" style="float: left; margin-right: 10px;" />
 
-The machine is controlled with four states:
-* **IDLE**: this is the waiting state where the machine is idle and waits for the start signal to be raised.
-* **WAIT_PIPE**: this is the state where the machine begin to search for the keys but the output doesn't still have the right value due to the pipeline latency. So a counter is set to count through the pipeline stages. The output of the `key selector` is ignored. When the counter reaches the pipe stages number the `end_count` signal is raised and the next state will be the `COMPARE` state.
-* **COMPARE**: From here the machine will generate and search the right key waiting for the `found_local` signal to be high.  
-* **FND**: this is the final state when the right key has been found. The found signal is raised for a clock cycle and the output contains the cracked key. Then the machine comes back to the `IDLE` state.
+The machine is composed of four states:
+* **IDLE**: this is state where the machine is idle and waits for the start signal to be raised.
+* **WAIT_PIPE**: this is the state where the machine begin to search for the keys but the output does not have the right value to compare yet, due to the pipeline latency. A counter is then incremented to count for all the pipeline stages. The output of the `KEY SELECTOR` is ignored. When the counter reaches the pipe stages number, the `end_count` signal is raised and the next state will be the `COMPARE` state.
+* **COMPARE**: from here the machine will generate and search the right key waiting for the `found_local` signal to be high.  
+* **FND**: this is the final state that is reached when the right key has been found. The `found` signal is raised for a clock cycle and the output contains the cracked key. Then, the machine goes back to the `IDLE` state.
 
-Whenever a stop signal is raised, the machine returns to the `IDLE` state.
+Whenever a `stop` signal is raised, the machine returns to the `IDLE` state.
 
 ## AXI4 lite machinery
 
@@ -165,15 +165,16 @@ The cracking machine communicates with the CPU using the AXI4 lite protocol. It 
 
 ## Validation
 
-Three test benches have been developed in order to validate the design. We spent a lot of effort to design good simulation environments, trying to cover as most unwanted and critical situation as possible.
+In order to design good simulation environments, we spent a lot of effort trying to cover as most unwanted and critical situations as possible.  
+Three test benches have then been developed for the validation of the design:
 
 1. **DES validation**  
-The test bench [tb_des] validates the single DES engine [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plain texts and keys; then, for each pair, it computes the cipher text and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the ciphered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles to ensure synchronization with stimulus data: indeed, it must start after the delay due to the pipeline stages. An example of simulation is shown in the following screenshot.
+The test bench [tb_des] validates the single DES engine [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plain texts and keys; then, for each pair, it computes the cipher text and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the ciphered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles to ensure the synchronization with the stimulus data: indeed, it must start after the delay due to the pipeline stages. An example of simulation is shown in the following screenshot.
 
 <img src="../doc/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 2. **DES controller validation**  
-The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random signals, calculates the correspondent DES response using a reference implemented inside the test bench and feeds the des controller with the data. More in particular the behavior is the following:
+The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random signals, calculates the corresponding DES response (sing a reference implemented inside the test bench and feeds the des controller with the data. In particular, the behavior is the following:
   * Random generation of plain text.
   * Random generation of the starting key $`K_0`$
   * Random generation of the distance $`d`$ between the starting key $`K_0`$ and the secret key $`K1`$
@@ -224,13 +225,27 @@ From the synthesis reports it is possible to analyze the results obtained with t
 
 Regarding the area constraints we can refer to the utilization report generated by the synthesis. The solution that uses the highest number of FPGA's slices consists on instantiating 12 DES blocks (specified in the code by the `DES_NUMBER` parameter). In this case the percentage of Slice LUTs used in the Zynq core is 92.38% and most of them are used for the logic. The Slice registers used as Flip-Flops are 19201 (corresponding to 54.55%) and are mainly due to the pipeline stages.
 
+The results just described are summarized in the following table.
+
+| Timing                                                        |
+| :----                    | :----                              |
+| Clock frequency [MHz]    | 187.512                            |
+| Clock period [ns]        | 5.333                              |
+| Slack [ns]               | 0.09                               |
+
+| Utilization                                                   |
+| :----                    | :----                              |
+| DES instances            | 12                                 |
+| Slice LUTs               | 92.38 %                            |
+| Flip-Flops               | 54.5 %                             |
+
 Since the DES cracker tries 12 keys per clock cycle, and considering the maximum clock frequency achieved with the synthesis, the final throughput of tried keys per second is equal to 2,250,144,000.  
 
 ## Conclusions
 
-Considering the worst case scenario, this implementation can find the correct key in at most 370 days. Having 40 Zybo boards connected and working in parallel, the DES algorithm can be cracked in at most 9 days. This result can be compared to the performances achieved in 1999 by the "Deep Crack" with a budget of $200,000 or with 1000 recent high end PCs.
+Considering the worst case scenario, this implementation will find the correct key in at most 370 days. Having 40 Zybo boards working in parallel with different starting keys, the DES algorithm will be cracked in at most 9 days. This result can be compared to the performances achieved in 1999 by the "Deep Crack" with a budget of $200,000 or with 1000 recent high end PCs.
 
-Note that design has been optimized for the `Zybo` board where there is space only for 12 DES machines. In case of bigger FPGAs the design should be changed a bit. One reason is the `KEY SELECTOR` operation because it could be really slow with many inputs. In that case, the best idea is to revise it into a pipelined tree structure. Since in theory is composed by multiplexers,  it is very easy. The second reason could be the presence of buffers for delivering the same signal to a lot of resources that could decrease the timing performances. In that case a timing analysis is required to evaluate the possibility of replicating some hardware in order to get rid of the buffers.
+Note that design has been optimized for the `Zybo` board where there is space only for 12 DES machines. In case of bigger FPGAs the design should be changed a bit. One reason could be related to the `KEY SELECTOR` operation, which can become really slow if performed with a large number inputs. In this case, the best solution is to revise that operation into a pipelined tree structure: since in theory the selection is composed of multiplexers, this change should be very easy. The second reason could be the presence of buffers placed during the synthesis in order to deliver the same signal to a lot of resources: this overhead could affect the timing performances. In this case, a timing analysis is required and, if necessary, one can decide to replicate some hardware in order to get rid of those buffers.
 
 
 [tb_des_ctrl]:          vhdl/sim/tb_des_ctrl.vhd
