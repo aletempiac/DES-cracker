@@ -78,7 +78,7 @@ This section is dedicated to the explanation of the DES cracker's datapath. The 
 
 Referring to the schematic, the input data are the plaintext $`P`$, the ciphertext $`C`$ (each of them of 64 bits) and the 56-bits starting key `k0`. Starting from `k0`, the new keys must be processed to feed each DES engine at every iteration. First of all, an accumulator (composed by an adder and a register) generates a new key adding `DES_NUMBER` to `k0` at each clock cycle: a mux is placed before it in order to select `k0` as input at the first iteration.
 
-The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). For instance, at the first iteration DES_0 receives the key k0, while th generic DES_i receives the key k0+i. At the iteration j, DES_0 receives the key $`k0+j*DES_NUMBER`$, while the generic DES_i receives the key $`k0+j*DES_NUMBER+i`$.
+The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). For instance, at the first iteration DES_0 receives the key k0, while th generic DES_i receives the key k0+i. At the iteration j, DES_0 receives the key $`k0+j*DES\_NUMBER`$, while the generic DES_i receives the key $`k0+j*DES\_NUMBER+i`$.
 
 Moreover, these 56-bits keys must be extended because the DES blocks take as input a 64-bits key. Note that the bits added in the extension should be parity bits: since they are not used for the purpose of cracking the algorithm, we decided to set them to 0.
 
@@ -245,7 +245,7 @@ Since the DES cracker tries 12 keys per clock cycle, and considering the maximum
 
 ## Linux Driver
 
-The test on the design has been performed directly using a Linux driver. In order to run the software, file [des_driver.c] has been developed.
+The linux driver to run the cracking machine is contained in the file [des_driver.c]. It takes as arguments the plain text, the cipher text and the starting key. When the `K1` has been found, it prints the result key.
 
 ## Conclusions
 
