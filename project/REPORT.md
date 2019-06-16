@@ -229,14 +229,14 @@ Regarding the area constraints we can refer to the utilization report generated 
 
 The results just described are summarized in the following table.
 
-| Timing                                                        |  
-| :----                    | :----                              |  
+| Timing                   |  
+| :----                    |  
 | Clock frequency [MHz]    | 187.512                            |  
 | Clock period [ns]        | 5.333                              |  
 | Slack [ns]               | 0.09                               |  
 
-| Utilization                                                   |  
-| :----                    | :----                              |  
+| Utilization              |  
+| :----                    |  
 | DES instances            | 12                                 |  
 | Slice LUTs               | 92.38 %                            |  
 | Flip-Flops               | 54.5 %                             |  
@@ -245,7 +245,7 @@ Since the DES cracker tries 12 keys per clock cycle, and considering the maximum
 
 ## Linux Driver
 
-The test on the design has been performed directly using a Linux driver. In order to run the software, two files [des_driver.c] and [test_des_driver.c] have been developed. 
+The test on the design has been performed directly using a Linux driver. In order to run the software, the file [des_driver.c] has been developed.
 
 ## Conclusions
 
@@ -269,3 +269,4 @@ Note that design has been optimized for the `Zybo` board where there is space on
 [des_cracker.syn.tcl]:  vhdl/syn/des_cracker.syn.tcl
 [timing report]:        vhdl/syn/reports/des_cracker.timing.rpt
 [utilization report]:   vhdl/syn/reports/des_cracker.utilization.rpt
+[des_driver.c]:         driver/des_driver.c
