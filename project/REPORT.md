@@ -16,6 +16,8 @@
 * [AXI4 lite machinery](#axi4-lite-machinery)
 * [Validation](#validation)
 * [Synthesis results](#synthesis-results)
+* [Linux Driver](#linux-driver)
+* [Conclusions](#conclusions)
 
 ## Introduction
 
@@ -240,6 +242,10 @@ The results just described are summarized in the following table.
 | Flip-Flops               | 54.5 %                             |  
 
 Since the DES cracker tries 12 keys per clock cycle, and considering the maximum clock frequency achieved with the synthesis, the final throughput of tried keys per second is equal to 2,250,144,000.  
+
+## Linux Driver
+
+The test on the design has been performed directly using a Linux driver. In order to run the software, two files [des_driver.c] and [test_des_driver.c] have been developed. 
 
 ## Conclusions
 
