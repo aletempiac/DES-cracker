@@ -78,7 +78,7 @@ This section is dedicated to the explanation of the DES cracker's datapath. The 
 
 Referring to the schematic, the input data are the plaintext $`P`$, the ciphertext $`C`$ (each of them of 64 bits) and the 56-bits starting key `k0`. Starting from `k0`, the new keys must be processed to feed each DES engine at every iteration. First of all, an accumulator (composed by an adder and a register) generates a new key adding `DES_NUMBER` to `k0` at each clock cycle: a mux is placed before it in order to select `k0` as input at the first iteration.
 
-The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). For instance, at the first iteration DES_0 receives the key k0, while th generic DES_i receives the key k0+i. At the iteration j, DES_0 receives the key k0+j*DES_NUMBER, while the generic DES_i receives the key k0+j*DES_NUMBER+i.
+The output key of the accumulator is then sent to each DES instance after being added an offset equal to the engine's index (within 0 to DES_NUMBER-1). For instance, at the first iteration DES_0 receives the key k0, while th generic DES_i receives the key k0+i. At the iteration j, DES_0 receives the key $`k0+j*DES_NUMBER`$, while the generic DES_i receives the key $`k0+j*DES_NUMBER+i`$.
 
 Moreover, these 56-bits keys must be extended because the DES blocks take as input a 64-bits key. Note that the bits added in the extension should be parity bits: since they are not used for the purpose of cracking the algorithm, we decided to set them to 0.
 
@@ -229,13 +229,13 @@ Regarding the area constraints we can refer to the utilization report generated 
 
 The results just described are summarized in the following table.
 
-| Timing                                                        |  
+| Timing                   | Result                             |  
 | :----                    | :----                              |  
 | Clock frequency [MHz]    | 187.512                            |  
 | Clock period [ns]        | 5.333                              |  
 | Slack [ns]               | 0.09                               |  
 
-| Utilization                                                   |  
+| Utilization              | Result                             |  
 | :----                    | :----                              |  
 | DES instances            | 12                                 |  
 | Slice LUTs               | 92.38 %                            |  
@@ -245,13 +245,13 @@ Since the DES cracker tries 12 keys per clock cycle, and considering the maximum
 
 ## Linux Driver
 
-The test on the design has been performed directly using a Linux driver. In order to run the software, two files [des_driver.c] and [test_des_driver.c] have been developed. 
+The test on the design has been performed directly using a Linux driver. In order to run the software, file [des_driver.c] has been developed.
 
 ## Conclusions
 
 Considering the worst case scenario, this implementation will find the correct key in at most 370 days. Having 40 Zybo boards working in parallel with different starting keys, the DES algorithm will be cracked in at most 9 days. This result can be compared to the performances achieved in 1999 by the "Deep Crack" with a budget of $200,000 or with 1000 recent high end PCs.
 
-Note that design has been optimized for the `Zybo` board where there is space only for 12 DES machines. In case of bigger FPGAs the design should be changed a bit. One reason could be related to the `KEY SELECTOR` operation, which can become really slow if performed with a large number inputs. In this case, the best solution is to revise that operation into a pipelined tree structure: since in theory the selection is composed of multiplexers, this change should be very easy. The second reason could be the presence of buffers placed during the synthesis in order to deliver the same signal to a lot of resources: this overhead could affect the timing performances. In this case, a timing analysis is required and, if necessary, one can decide to replicate some hardware in order to get rid of those buffers.
+Note that design has been optimized for the `Zybo` board where there is space only for 12 DES machines. In case of bigger FPGAs the design should be changed a bit. One reason could be related to the `KEY SELECTOR` operation, which could become really slow if performed with a large number inputs. In this case, the best solution is to revise that operation into a pipelined tree structure: since in theory the selection is composed of multiplexers, this change should be very easy. The second reason could be the presence of buffers placed during the synthesis in order to deliver the same signal to a lot of resources: this overhead could affect the timing performances. In this case, a timing analysis is required and, if necessary, one can decide to replicate some hardware in order to get rid of those buffers.
 
 
 [tb_des_ctrl]:          vhdl/sim/tb_des_ctrl.vhd
@@ -269,3 +269,4 @@ Note that design has been optimized for the `Zybo` board where there is space on
 [des_cracker.syn.tcl]:  vhdl/syn/des_cracker.syn.tcl
 [timing report]:        vhdl/syn/reports/des_cracker.timing.rpt
 [utilization report]:   vhdl/syn/reports/des_cracker.utilization.rpt
+[des_driver.c]:         driver/des_driver.c
