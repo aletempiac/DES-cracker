@@ -59,7 +59,11 @@ package body rnd_pkg is
 			variable tmp: integer;
 		begin
 			throw;
-			tmp := min + integer(real(max - min) * rnd + 0.5);
+            if (max > min) then
+			    tmp := min + integer(real(max - min) * rnd + 0.5);
+            else
+                tmp := 0;
+            end if;
 			return tmp;
 		end function get_integer;
 
@@ -561,10 +565,10 @@ begin
             --generate k0
             k0_loc := rg.get_std_ulogic_vector(56);
             --generate difference btw k and k0
-            d_k := rg.get_integer(0, 10000);
+            d_k := rg.get_integer(7, 10000);
             --generate probability of stopping
             stop_b := rg.get_boolean_p(0.2);
-            stop_i := rg.get_integer(3, d_k-2);
+            stop_i := rg.get_integer(5, d_k-6);
             --generate start delay
             start_d := rg.get_integer(40, 100);
             --calculate k
@@ -604,6 +608,9 @@ begin
             wait until clk='1' and clk'event;
             --now start generating signals for comparison
             start <= '0';
+            if (stop_i=0) then
+                stop_b:=false;
+            end if;
             if (stop_b=true) then
                 n_iter := (d_k - stop_i) / DES_NUMBER + 1 + PIPE_STAGES;
             else
@@ -612,13 +619,18 @@ begin
             wait until clk='1' and clk'event;
             wait until clk='1' and clk'event;
             evaluate <= '1';
-            freewrite <= '1';
             for i in 1 to n_iter-1 loop
                 wait until clk='1' and clk'event;
                 if (i=PIPE_STAGES) then
                     k <= k0_loc + DES_NUMBER-1;
                 elsif (i>PIPE_STAGES) then
                     k <= k + DES_NUMBER;
+                end if;
+                if (i>=PIPE_STAGES and i<n_iter-45) then
+                    freewrite <= '1';
+                else
+                    freewrite <= '0';
+                    notfound <= '1';
                 end if;
             end loop;
             if (stop_b=true) then
@@ -1023,7 +1035,7 @@ begin
             else
                 s0_axi_arvalid <= '1';
                 if (notfound='0') then
-                    rd := rg.get_integer(9, 12);
+                    rd := rg.get_integer(9, 15);
                     if (rd=10) then
                         s0_axi_araddr <= "000000100000";
                     elsif (rd=11) then
@@ -1131,13 +1143,13 @@ begin
         if (aclk='1' and aclk'event) then
             if (aresetn='0') then
                 irq_ref <= '0';
-                led_ref <= (others => '0');
             else
                 irq_ref <= found_ref;
-                led_ref <= k_ref(33 downto 30);
             end if;
         end if;
     end process;
+
+    led_ref <= k_ref(33 downto 30);
 
 	-- Check unknowns
 	process
@@ -1201,7 +1213,7 @@ begin
         aresetn <= '1';
         wait until aclk='1' and aclk'event;
 
-        wait for 2 ms;
+        wait for 10 ms;
         -- Stop the clock and hence terminate the simulation
         TbSimEnded <= '1';
 		write(l, string'("NON REGRESSION TEST PASSED - "));

@@ -127,7 +127,7 @@ begin
             if (key_inc='0') then
                 key <= k0;
             else
-                key <= std_ulogic_vector(to_unsigned(to_integer(unsigned(key)) + DES_NUMBER, 56));
+                key <= std_ulogic_vector(unsigned(key) + DES_NUMBER);
             end if;
         end if;
     end process;

@@ -101,7 +101,9 @@ begin
                 found_s <= '0';
                 irq     <= '0';
             else
-                k1_s    <= k1;
+                if (found='1') then
+                    k1_s    <= k1;
+                end if;
                 led(3 downto 0) <= k(33 downto 30);
                 if (k_read='0') then
                     k_s <= k;

@@ -17,7 +17,7 @@ array set ios {
   led[2] { G14 LVCMOS33 }
   led[3] { D18 LVCMOS33 }
 }
-set frequency_mhz 185
+set frequency_mhz 200
 
 # DO NOT MODIFY ANYTHING BELOW THIS LINE UNLESS YOU KNOW WHAT YOU ARE DOING
 set board "digilentinc.com:zybo:part0:1.0"
@@ -123,9 +123,11 @@ set clock [get_clocks]
 set_false_path -from $clock -to [get_ports led[*]]
 
 # Implementation
-opt_design
-place_design
-route_design
+opt_design -directive Explore
+place_design -directive Explore
+phys_opt_design -directive AggressiveExplore
+route_design -directive Explore
+phys_opt_design -directive Explore
 write_bitstream -force $design
 write_sysdef -force -bitfile $design.bit -hwdef $design.hwdef $design.sysdef
 

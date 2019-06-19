@@ -7,14 +7,13 @@ vcom -2008 -work myLib $src/a.des/key_round.vhd
 vcom -2008 -work myLib $src/a.des/key_gen.vhd
 vcom -2008 -work myLib $src/a.des/des.vhd
 vcom -2008 -work myLib $src/tb_des.vhd
-vsim myLib.tb_des
-# vcom -2008 -work myLib $src/a.des/des_wrap.vhd
-# vcom -2008 -work myLib $src/a.des/comparator.vhd
-# vcom -2008 -work myLib $src/counter.vhd
-# vcom -2008 -work myLib $src/des_ctrl.vhd
-# vcom -2008 -work myLib $src/des_cracker.vhd
-# vcom -2008 -work myLib $src/tb_des_ctrl.vhd
-# vcom -2008 -work myLib $src/tb_des_cracker.vhd
 # vsim myLib.tb_des
-#vsim myLib.tb_des_ctrl
-#vsim myLib.tb_des_cracker
+vcom -2008 -work myLib $src/a.des/des_wrap.vhd
+vcom -2008 -work myLib $src/a.des/comparator.vhd
+vcom -2008 -work myLib $src/counter.vhd
+vcom -2008 -work myLib $src/des_ctrl.vhd
+vcom -2008 -work myLib $src/des_cracker.vhd
+# vcom -2008 -work myLib $src/tb_des_ctrl.vhd
+vcom -2008 -work myLib $src/tb_des_cracker.vhd
+# vsim myLib.tb_des_ctrl
+vsim myLib.tb_des_cracker

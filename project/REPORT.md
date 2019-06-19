@@ -74,7 +74,7 @@ In addition to all the constant tables needed to implement the DES algorithm, ot
 
 This section is dedicated to the explanation of the DES cracker's datapath. The block scheme is shown in the following picture.
 
-<img src="../doc/datapath.png" alt="Schematic" width="800" style="float: left; margin-right: 10px;" />
+<img src="figures/datapath.png" alt="Schematic" width="800" style="float: left; margin-right: 10px;" />
 
 Referring to the schematic, the input data are the plaintext $`P`$, the ciphertext $`C`$ (each of them of 64 bits) and the 56-bits starting key `k0`. Starting from `k0`, the new keys must be processed to feed each DES engine at every iteration. First of all, an accumulator (composed by an adder and a register) generates a new key adding `DES_NUMBER` to `k0` at each clock cycle: a mux is placed before it in order to select `k0` as input at the first iteration.
 
@@ -125,7 +125,7 @@ This section explain how the controller manages the machine. The controller ha b
 
 A Moore state machine has been realized and the state diagram is shown in the following figure.
 
-<img src="../doc/state_machine.png" alt="state machine" width="500" style="float: left; margin-right: 10px;" />
+<img src="figures/state_machine.png" alt="state machine" width="500" style="float: left; margin-right: 10px;" />
 
 The machine is composed of four states:
 * **IDLE**: this is state where the machine is idle and waits for the start signal to be raised.
@@ -173,7 +173,7 @@ Three test benches have then been developed for the validation of the design:
 1. **DES validation**  
 The test bench [tb_des] validates the single DES engine [des.vhd]. In order to do this simulation, a Python3 script ([des_encrypt.py]) has been coded for the generation of the inputs and the output references. It creates 100 random plain texts and keys; then, for each pair, it computes the cipher text and it applies the permutation $`PC_1`$ on the key. The two first data are written in a text file named [vector.txt] and are used by the VHDL test bench as inputs of the simulation. Instead, the two computed results are written in the file [expected.txt] and are compared during the simulation with the actual outputs produced by the `des` instance, which are the ciphered message `p_out` and the permutated key `cd16`. After feeding the DES block with the inputs, the process that reads the references must wait 15 clock cycles to ensure the synchronization with the stimulus data: indeed, it must start after the delay due to the pipeline stages. An example of simulation is shown in the following screenshot.
 
-<img src="../doc/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
+<img src="figures/des_validation.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 2. **DES controller validation**  
 The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench generates random signals, calculates the corresponding DES response (sing a reference implemented inside the test bench and feeds the des controller with the data. In particular, the behavior is the following:
@@ -190,11 +190,11 @@ The test bench [tb_des_ctrl] validates the design [des_ctrl.vhd]. The test bench
 The random generation tries to cover all the possible combinations of signals and timing events, also at the boundaries.  
 In the following image a normal execution of a cracking cycle is shown. The DES controller finds the key when the `found` signal is raised
 
-<img src="../doc/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
+<img src="figures/ctrl_wave_n.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 In the following image, the cracker is stopped before it could find the key. The changing of the state to `IDLE` is notable. The DES is so ready then to start again a cracking cycle.
 
-<img src="../doc/ctrl_wave_s.png" alt="state machine" style="float: left; margin-right: 10px;" />
+<img src="figures/ctrl_wave_s.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 3. **DES cracker validation**  
 The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works as the [tb_des_ctrl] described before but translates the reference to communicate with AXI4 protocol and verify every signal and register values through reads and writes. A AXI4 reader and writer has been implemented inside the simulation. More details had to be taken into account so the simulator is pretty complex. With respect to the [tb_des_ctrl] further behaviors are implemented:
@@ -208,7 +208,7 @@ The test bench [tb_des_cracker] validates the design [des_cracker.vhd]. It works
 
 The following image shows some cracking cycles. A lot of testing reads and writes can be noticed. The start and read signals are not really used but they are useful for a general understanding of how the test is proceeding. The purple signal represents the `irq` that is raised every time that a secret key is found. As written before, the gold signal `k_freeze` saves $`k`$ when its least significant bit is read and resumes when the most significant is read, in order to have the right reference for the $`k`$ AXI reads.
 
-<img src="../doc/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
+<img src="figures/cracker_wave.png" alt="state machine" style="float: left; margin-right: 10px;" />
 
 The design has been tested for 200 ms trying more than 40000 random cracking situations.  
 To execute the simulation the [des_sim.src] can help to compile the design and to open the right simulation. Also the files [wave_ctrl.do] and [wave_cracker.do], respectively for the controller and cracker validation, can be useful for a good placement and understanding of the waveforms.

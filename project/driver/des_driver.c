@@ -24,21 +24,21 @@ int main(int argc, char **argv) {
   // virtual address space
   volatile uint32_t *regs;
 
-  uint32_t plaintext_h, cyphertext_h, k0_h;
-  uint32_t plaintext_l, cyphertext_l, k0_l;
+  uint32_t plaintext_h, ciphertext_h, k0_h;
+  uint32_t plaintext_l, ciphertext_l, k0_l;
   uint32_t k_h, k_l, k1_h, k1_l;
 
   if (argc!=7) {
-  	fprintf(stderr, "ARGS error: plaintext, cyphertext, k0\n");
+  	fprintf(stderr, "ARGS error: plaintext, ciphertext, k0\n");
 	return -1;
   }
 
-  plaintext_h = strtol(argv[1], NULL, 16);
-  plaintext_l = strtol(argv[2], NULL, 16);
-  cyphertext_h = strtol(argv[3], NULL, 16);
-  cyphertext_l = strtol(argv[4], NULL, 16);
-  k0_h = strtol(argv[5], NULL, 16);
-  k0_l = strtol(argv[6], NULL, 16);
+  plaintext_h = strtoul(argv[1], NULL, 16);
+  plaintext_l = strtoul(argv[2], NULL, 16);
+  ciphertext_h = strtoul(argv[3], NULL, 16);
+  ciphertext_l = strtoul(argv[4], NULL, 16);
+  k0_h = strtoul(argv[5], NULL, 16);
+  k0_l = strtoul(argv[6], NULL, 16);
 
   // Open device
   fd = open(DES_DEVICE, O_RDWR);
@@ -58,8 +58,8 @@ int main(int argc, char **argv) {
 
   printf("executing for:\n\tplaintext: " "0x%08" PRIx32, plaintext_h);
   printf("%08" PRIx32 "\n", plaintext_l);
-  printf("\tcyphertext: " "0x%08" PRIx32, cyphertext_h);
-  printf("%08" PRIx32 "\n", cyphertext_l);
+  printf("\tciphertext: " "0x%08" PRIx32, ciphertext_h);
+  printf("%08" PRIx32 "\n", ciphertext_l);
   printf("\tk0: " "0x%06" PRIx32, k0_h);
   printf("%08" PRIx32 "\n", k0_l);
 
@@ -75,12 +75,12 @@ int main(int argc, char **argv) {
       break;
     }
 
-	regs[0]=(uint32_t) (plaintext_l);
-	regs[1]=(uint32_t) (plaintext_h);
-	regs[2]=(uint32_t) (cyphertext_l);
-	regs[3]=(uint32_t) (cyphertext_h);
-	regs[4]=(uint32_t) (k0_l);
-	regs[5]=(uint32_t) (k0_h);
+	regs[0]=plaintext_l;
+	regs[1]=plaintext_h;
+	regs[2]=ciphertext_l;
+	regs[3]=ciphertext_h;
+	regs[4]=k0_l;
+	regs[5]=k0_h;
 
     // Wait for interrupt
     if(read(fd, &interrupts, sizeof(interrupts)) < 0) {

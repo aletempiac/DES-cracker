@@ -623,7 +623,7 @@ begin
         sresetn <= '1';
         wait until clk='1' and clk'event;
 
-        wait for 200 us;
+        wait for 5 ms;
         -- Stop the clock and hence terminate the simulation
         TbSimEnded <= '1';
 		write(l, string'("NON REGRESSION TEST PASSED - "));
